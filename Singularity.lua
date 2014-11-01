@@ -4,11 +4,169 @@
 -- TODO: Refactor literally everything
 -- TODO: Check that we're not passing more information around than we need to
 
+local cfg, rc
 
-local baseDurations = { -- May have to be updated in future patches
-  ["Shadow Word: Pain"] = 18,
-  ["Vampiric Touch"] = 15,
-  -- ["Void Entropy"] = 60, -- We probably don't care about this
+local defaults = {
+  bar = {
+    backdrop = {
+      bgFile = "Interface\\CHATFRAME\\CHATFRAMEBACKGROUND",
+      edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
+      tile = false,
+      tileSize = 32,
+      edgeSize = 1,
+      insets = {
+        left = 1,
+        right = 1,
+        top = 1,
+        bottom = 1,
+      },
+      color = {
+        r = 0,
+        g = 0,
+        b = 0,
+        a = 0.5,
+      },
+      borderColor = {
+        br = 0,
+        bg = 0,
+        bb = 0,
+        ba = 1,
+      },
+    },
+    icon = {
+      anchorFrom = "RIGHT",
+      anchorTo = "LEFT",
+      coords = {
+        l = 0.1,
+        r = 0.9,
+        t = 0.1,
+        b = 0.9,
+      },
+      size = 30,
+      xOffset = -1,
+      yOffset = 0,
+    },
+    text = {
+      anchorFrom = "CENTER",
+      anchorTo = "CENTER",
+      fontPath = "Fonts\\FRIZQT__.ttf",
+      fontSize = 14,
+      fontFlags = "OUTLINE",
+      xOffset = 0,
+      yOffset = 0,
+    },
+    texture = {
+      alert = {
+        r = 0.7,
+        g = 0,
+        b = 0,
+        a = 1,
+      },
+      path = nil,
+      height = 30,
+      width = 200,
+      color = {
+        r = 0.7,
+        g = 0.7,
+        b = 0.7,
+        a = 1,
+      },
+    },
+    height = 30,
+    maxTime = 12,
+    spacing = 1,
+    width = 200,
+  },
+  targetContainer = {
+    backdrop = {
+      bgFile = "Interface\\CHATFRAME\\CHATFRAMEBACKGROUND",
+      edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
+      tile = false,
+      tileSize = 32,
+      edgeSize = 1,
+      insets = {
+        left = 1,
+        right = 1,
+        top = 1,
+        bottom = 1
+      },
+      color = {
+        r = 0,
+        g = 0,
+        b = 0,
+        a = 0.5,
+      },
+      borderColor = {
+        br = 0,
+        bg = 0,
+        bb = 0,
+        ba = 1,
+      },
+    },
+    anchorFrom = "TOP",
+    anchorFrame = "UIParent",
+    anchorTo = "CENTER",
+    width = 234,
+    xOffset = 0,
+    yOffset = -200,
+  },
+  alwaysShowOrbText = false,
+  checkRange = true,
+  desaturateSWD = true,
+  mouseover = false,
+  showIcons = true,
+  showOrbText = true,
+
+  barDisplayOrder = {
+    "Insanity",
+    "Mind Flay",
+    "Mind Sear",
+    "Devouring Plague",
+    "Shadow Word: Insanity",
+    "Mind Blast",
+    "Glyph of Mind Spike",
+    "Shadow Word: Death",
+    "Surge of Darkness",
+    "Shadowy Insight",
+    "Divine Star",
+    "Vampiric Touch",
+    "Shadow Word: Pain",
+    "Cascade",
+    "Halo",
+    "Mindbender",
+    "Void Entropy",
+    "Power Infusion",
+    "Shadowfiend",
+  },
+  baseDurations = {
+    ["Shadow Word: Pain"] = 18,
+    ["Vampiric Touch"] = 15,
+  },
+  buffs = {
+    ["Shadow Word: Insanity"] = 132573,
+    ["Glyph of Mind Spike"] = 81292,
+    ["Surge of Darkness"] = 87160,
+    -- ["Shadowy Insight"] = 124430,
+  },
+  cooldowns = {
+    ["Shadow Word: Death"] = 32379,
+    ["Mind Blast"] = 8092,
+    ["Divine Star"] = 122121,
+    ["Cascade"] = 127632,
+    ["Halo"] = 120644,
+    ["Mindbender"] = 123040,
+    -- ["Power Infusion"] = 10060,
+    ["Shadowfiend"] = 34433,
+  },
+  debuffs = {
+    ["Mind Flay"] = 15407,
+    ["Insanity"] = 129197,
+    ["Mind Sear"] = 48045,
+    -- ["Devouring Plague"] = 158831,
+    ["Vampiric Touch"] = 34914,
+    ["Shadow Word: Pain"] = 589,
+    ["Void Entropy"] = 155361,
+  },
 }
 
 local units = {
@@ -21,34 +179,6 @@ local units = {
   -- ["boss3"] = "",
   -- ["boss4"] = "",
   -- ["boss5"] = "",
-}
-
-local buffs = {
-  ["Shadow Word: Insanity"] = 132573, -- 2s/Orb (6s)
-  ["Glyph of Mind Spike"] = 81292, -- 8s
-  ["Surge of Darkness"] = 87160, -- 10s
-  -- ["Shadowy Insight"] = 124430, -- 12s
-}
-
-local debuffs = {
-  ["Mind Flay"] = 15407, -- 3s
-  ["Insanity"] = 129197, -- 3s
-  ["Mind Sear"] = 48045, -- 5s
-  -- ["Devouring Plague"] = 158831, -- 6s
-  ["Vampiric Touch"] = 34914, -- 15s
-  ["Shadow Word: Pain"] = 589, -- 18s
-  ["Void Entropy"] = 155361, -- 60s; TODO: Check this at 100
-}
-
-cooldowns = {
-  ["Shadow Word: Death"] = 32379, --8s
-  ["Mind Blast"] = 8092, -- 9s
-  ["Divine Star"] = 122121, -- 15s
-  ["Cascade"] = 127632, -- 25s
-  ["Halo"] = 120644, -- 40s
-  ["Mindbender"] = 123040, -- 60s
-  -- ["Power Infusion"] = 10060, -- 120s
-  ["Shadowfiend"] = 34433, -- 180s
 }
 
 local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
@@ -65,25 +195,6 @@ local targetingEvents = {
   ["UPDATE_MOUSEOVER_UNIT"] = "",
 }
 
-local priorityList = {
-  "Insanity", "Mind Flay",
-  "Mind Sear",
-  -- "Devouring Plague",
-  "Shadow Word: Insanity",
-  "Mind Blast",
-  "Glyph of Mind Spike",
-  "Shadow Word: Death",
-  "Surge of Darkness",
-  -- "Shadowy Insight",
-  "Divine Star", "Vampiric Touch",
-  "Shadow Word: Pain",
-  "Cascade",
-  "Halo",
-  "Mindbender", "Void Entropy",
-  -- "Power Infusion",
-  "Shadowfiend",
-}
-
 activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
 local targetBarContainer = CreateFrame("Frame", nil, UIParent)
 targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame, ...}
@@ -98,48 +209,56 @@ local function isInList(item, list) -- Utility function
   return false
 end
 
-local function setupBar(barFrame, backdrop)
+local function setupBar(barFrame)
   local b = barFrame
-  b.baseHeight = 30
-  b.baseWidth = 200
   b.iconTexture = b:CreateTexture()
-  b.iconTexture:SetPoint("RIGHT", b, "LEFT", -1, 0)
-  b.iconTexture:SetSize(b.baseHeight, b.baseHeight)
-  b.iconTexture:SetTexCoord(0.1, 0.9, 0.1, 0.9)
-  b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
-  -- b:SetBackdrop(backdrop)
-  -- b:SetBackdropBorderColor(0, 0, 0, 1)
-  -- b:SetBackdropColor(0, 0, 0, 0.5)
-  -- b:SetPoint("TOP", b:GetParent(), "TOP", 0, -b:GetParent():GetNumChildren() * (b.baseHeight + 1) - 2)
-  b:SetSize(b.baseWidth, b.baseHeight)
+  if cfg.showIcons then
+    b.iconTexture:SetPoint(cfg.bar.icon.anchorFrom, b, cfg.bar.icon.anchorTo, cfg.bar.icon.xOffset, cfg.bar.icon.yOffset)
+    b.iconTexture:SetSize(cfg.bar.icon.size, cfg.bar.icon.size)
+    b.iconTexture:SetTexCoord(cfg.bar.icon.coords.l, cfg.bar.icon.coords.r, cfg.bar.icon.coords.t, cfg.bar.icon.coords.b)
+    b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
+  end
+  b:SetBackdrop(cfg.bar.backdrop)
+  b:SetBackdropColor(cfg.bar.backdrop.color.r, cfg.bar.backdrop.color.g, cfg.bar.backdrop.color.b, cfg.bar.backdrop.color.a)
+  b:SetBackdropBorderColor(cfg.bar.backdrop.borderColor.r, cfg.bar.backdrop.borderColor.g, cfg.bar.backdrop.borderColor.b, cfg.bar.backdrop.borderColor.a)
+  b:SetSize(cfg.bar.width, cfg.bar.height)
   b.stackText = b:CreateFontString()
-  b.stackText:SetFont("Fonts\\FRIZQT__.ttf", 16, "OUTLINE")
-  b.stackText:SetPoint("CENTER", b.iconTexture, "CENTER")
+  b.stackText:SetFont(cfg.bar.text.fontPath, cfg.bar.text.fontSize, cfg.bar.text.fontFlags)
+  local textAnchor = b
+  if cfg.showIcons then
+    textAnchor = b.iconTexture
+  end
+  b.stackText:SetPoint(cfg.bar.text.anchorFrom, textAnchor, cfg.bar.text.anchorTo, cfg.bar.text.xOffset, cfg.bar.text.yOffset)
   b.texture = b:CreateTexture()
-  b.texture.baseWidth = b.baseWidth
   b.texture:SetPoint("LEFT", b, "LEFT", 1, 0)
-  b.texture:SetHeight(b.baseHeight)
-  b.timeScaleMax = 12
+  b.texture:SetHeight(cfg.bar.texture.height)
 end
 
 local function rearrangeTargetBars()
-  local offset = -2
-  for n, spellName in ipairs(priorityList) do
-    if targetBars[spellName]:IsShown() then
-      targetBars[spellName]:SetPoint("TOP", targetBarContainer, "TOP", targetBars[spellName].iconTexture:GetWidth() / 2, offset)
-      if spellName ~= "Insanity" and spellName ~= "Mind Flay" then
-        offset = offset - targetBars[spellName]:GetHeight() - 1
+  local yOffset = -2
+  for _, spellName in ipairs(cfg.barDisplayOrder) do
+    if targetBars[spellName] ~= nil then
+      if targetBars[spellName]:IsShown() then
+        local xOffset = 0
+        if cfg.showIcons then
+          xOffset = cfg.bar.icon.size / 2
+        end
+        targetBars[spellName]:SetPoint("TOP", targetBarContainer, "TOP", xOffset, yOffset)
+
+        if spellName ~= "Insanity" and spellName ~= "Mind Flay" then
+          yOffset = yOffset - cfg.bar.height - cfg.bar.spacing
+        end
       end
     end
   end
-  targetBarContainer:SetHeight(-offset + 1)
-end
-
-local function missingTalent(row, column)
-  return not select(4, GetTalentInfo(row, column, GetActiveSpecGroup()))
+  targetBarContainer:SetHeight(-yOffset + 1)
 end
 
 local function shouldShowBar(spellName)
+  local function missingTalent(row, column)
+    return not select(4, GetTalentInfo(row, column, GetActiveSpecGroup()))
+  end
+
   if spellName == "Surge of Darkness" and missingTalent(3, 1) then
     return false
   elseif spellName == "Mindbender" and missingTalent(3, 2) then
@@ -174,97 +293,77 @@ local function showTargetBars()
     if spellName == "Mind Flay" or spellName == "Mind Sear" or spellName == "Insanity" then
       frame.stackText:SetText(select(4, UnitBuff("player", "Glyph of Mind Spike")))
     end
-
-    if frame.active then
-      -- frame:Show()
-      -- frame:SetAlpha(1)
-    else
-      -- frame:Hide()
-      -- frame:SetAlpha(0)
-    end
   end
   rearrangeTargetBars()
 end
 
 local function init()
-  local backdrop = { -- TODO: Configuration options for this
-    bgFile = "Interface\\CHATFRAME\\CHATFRAMEBACKGROUND",
-    edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
-    tile = false,
-    tileSize = 32,
-    edgeSize = 1,
-    insets = {
-    left = 1,
-    right = 1,
-    top = 1,
-    bottom = 1
-    }
-  }
-
-  local rc = LibStub("LibRangeCheck-2.0")
-
-  for k, v in pairs(cooldowns) do
+  for k, v in pairs(cfg.cooldowns) do
     targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
     targetBars[k].active = false
     targetBars[k].spellID = v
-    setupBar(targetBars[k], backdrop)
+    setupBar(targetBars[k])
   end
-  for k, v in pairs(buffs) do
+  for k, v in pairs(cfg.buffs) do
     targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
     targetBars[k].active = false
     targetBars[k].spellID = v
-    setupBar(targetBars[k], backdrop)
+    setupBar(targetBars[k])
   end
-  for k, v in pairs(debuffs) do
+  for k, v in pairs(cfg.debuffs) do
     targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
     targetBars[k].active = false
     targetBars[k].spellID = v
     targetBars[k].checkForSafeTime = true
-    setupBar(targetBars[k], backdrop)
+    setupBar(targetBars[k])
   end
 
-  local yOffset = 0
-
   showTargetBars()
-  targetBars["Mind Sear"]:SetAlpha(0)
-  targetBars["Insanity"]:SetAlpha(0)
-  targetBarContainer:SetPoint("TOP", UIParent, "CENTER", 0, 200)
-  targetBarContainer:SetBackdrop(backdrop)
-  targetBarContainer:SetBackdropBorderColor(0, 0, 0, 1)
-  targetBarContainer:SetBackdropColor(0, 0, 0, 0.5)
-  targetBarContainer:SetSize(targetBars["Mind Blast"]:GetWidth() + targetBars["Mind Blast"].iconTexture:GetWidth() + 1 + 4, 10)
+  if targetBars["Mind Sear"] ~= nil then
+    targetBars["Mind Sear"]:SetAlpha(0)
+  end
+  if targetBars["Insanity"] ~= nil then
+    targetBars["Insanity"]:SetAlpha(0)
+  end
+  targetBarContainer:SetPoint(cfg.targetContainer.anchorFrom, cfg.targetContainer.anchorFrame, cfg.targetContainer.anchorTo, cfg.targetContainer.xOffset, cfg.targetContainer.yOffset)
+  targetBarContainer:SetBackdrop(cfg.targetContainer.backdrop)
+  targetBarContainer:SetBackdropBorderColor(cfg.targetContainer.backdrop.borderColor.r, cfg.targetContainer.backdrop.borderColor.g, cfg.targetContainer.backdrop.borderColor.b, cfg.targetContainer.backdrop.borderColor.a)
+  targetBarContainer:SetBackdropColor(cfg.targetContainer.backdrop.color.r, cfg.targetContainer.backdrop.color.g, cfg.targetContainer.backdrop.color.b, cfg.targetContainer.backdrop.color.a)
+  local extra = 0
+  if cfg.showIcons then
+    extra = cfg.bar.icon.size
+  end
+  targetBarContainer:SetSize(cfg.targetContainer.width, 0)
 end
 
 local function runTimer(frame, expires)
   frame:SetScript("OnUpdate", function()
     if not frame.active then
-      frame.texture:SetTexture(0,0,0,0)
       showTargetBars()
       frame:SetScript("OnUpdate", nil)
     else
       if frame:GetName() == "Glyph of Mind Spike" or frame:GetName() == "Surge of Darkness" or frame:GetName() == "Shadowy Insight" then
         expires = select(7, UnitBuff("player", frame:GetName())) or 0
       end
-      if isInList(frame:GetName(), cooldowns) then
+      if isInList(frame:GetName(), cfg.cooldowns) then
         local started, cooldown = GetSpellCooldown(frame:GetName())
         expires = started + cooldown
       end
       local timeLeft = expires - GetTime()
 
       if timeLeft > 0 then
-        frame.texture:SetTexture(0,0.7,0,1)
-        if timeLeft >= frame.timeScaleMax then
-          frame.texture:SetWidth(frame.texture.baseWidth)
+        frame.texture:SetTexture(cfg.bar.texture.color.r,cfg.bar.texture.color.g,cfg.bar.texture.color.b,cfg.bar.texture.color.a)
+        if timeLeft >= cfg.bar.maxTime then
+          frame.texture:SetWidth(cfg.bar.texture.width)
         else
-          local b = baseDurations[frame:GetName()]
+          local b = cfg.baseDurations[frame:GetName()]
           if b and timeLeft < b * 0.3 or false then -- 6.0 DoTs 30% thing
-            frame.texture:SetTexture(0.7,0,0,1)
+            frame.texture:SetTexture(cfg.bar.texture.alert.r,cfg.bar.texture.alert.g,cfg.bar.texture.alert.b,cfg.bar.texture.alert.a)
           end
-          frame.texture:SetWidth(frame.texture.baseWidth * timeLeft / frame.timeScaleMax)
+          frame.texture:SetWidth(cfg.bar.texture.width * timeLeft / cfg.bar.maxTime)
         end
       else
         frame.active = false
-        frame.texture:SetTexture(0,0,0,0)
         showTargetBars()
         frame:SetScript("OnUpdate", nil)
       end
@@ -278,18 +377,13 @@ local function readFromDebuffList()
       if UnitGUID(unit) == entry["targetGUID"] then
         targetBars[entry["spellName"]].active = true
         runTimer(targetBars[entry["spellName"]], entry["expires"])
-        if entry["spellName"] == "Mind Flay" then
-          targetBars["Mind Flay"]:SetAlpha(1)
-          targetBars["Mind Sear"]:SetAlpha(0)
-          targetBars["Insanity"]:SetAlpha(0)
-        elseif entry["spellName"] == "Mind Sear" then
-          targetBars["Mind Flay"]:SetAlpha(0)
-          targetBars["Mind Sear"]:SetAlpha(1)
-          targetBars["Insanity"]:SetAlpha(0)
-        elseif entry["spellName"] == "Insanity" then
-          targetBars["Mind Flay"]:SetAlpha(0)
-          targetBars["Mind Sear"]:SetAlpha(0)
-          targetBars["Insanity"]:SetAlpha(1)
+        if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then
+          for k, v in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
+            if targetBars[v] ~= nil then
+              targetBars[v]:SetAlpha(0)
+            end
+          end
+          targetBars[entry["spellName"]]:SetAlpha(1)
         end
         break
       end
@@ -324,17 +418,28 @@ end
 
 local function updateOrbsText()
   local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
-  orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
+  if not cfg.alwaysShowOrbText then
+    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
+  end
   targetBars["Mind Blast"].stackText:SetText(orbs)
 end
 
 local function processEvents(self, event, ...)
-  if isInList(event, targetingEvents) then
-    for spell, _ in pairs(debuffs) do
+  if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then
+    -- if SingularityDB == nil then -- TODO: Uncomment
+      SingularityDB = defaults
+    -- end
+    cfg = SingularityDB
+
+    init()
+    rearrangeTargetBars()
+    f:UnregisterEvent("ADDON_LOADED")
+  elseif isInList(event, targetingEvents) then
+    for spell, _ in pairs(cfg.debuffs) do
       targetBars[spell].active = false
     end
 
-    for spellName, spellID in pairs(debuffs) do
+    for spellName, spellID in pairs(cfg.debuffs) do
       local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
 
       if expires ~= nil then
@@ -343,11 +448,13 @@ local function processEvents(self, event, ...)
     end
     readFromDebuffList()
   elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
-    targetBars["Mind Flay"].active = false
-    targetBars["Mind Sear"].active = false
-    targetBars["Insanity"].active = false
+    for _, v in pairs({"Insanity", "Mind Flay", "Mind Sear"}) do
+      if targetBars[v] ~= nil then
+        targetBars[v].active = false
+      end
+    end
   elseif event == "PLAYER_ENTERING_WORLD" then
-    for spellName, _ in pairs(buffs) do
+    for spellName, _ in pairs(cfg.buffs) do
       local expires = select(7, UnitBuff("player", spellName))
       if expires ~= nil then
         targetBars[spellName].active = true
@@ -355,14 +462,16 @@ local function processEvents(self, event, ...)
       end
     end
 
-    for spellName, _ in pairs(cooldowns) do
+    for spellName, _ in pairs(cfg.cooldowns) do
       local cd = GetSpellCooldown(spellName)
       if cd ~= nil and cd ~= 0 then
         targetBars[spellName].active = true
         runTimer(targetBars[spellName], 0)
       end
     end
-    updateOrbsText()
+    if cfg.showOrbText then
+      updateOrbsText()
+    end
     readFromDebuffList()
   elseif event == "PLAYER_TALENT_UPDATE" then
     showTargetBars()
@@ -371,14 +480,13 @@ local function processEvents(self, event, ...)
 
     if (type == "SPELL_CAST_SUCCESS" or type == "SPELL_AURA_APPLIED_DOSE") and sourceGUID == UnitGUID("player") and spellName == "Mind Spike" then
       readFromDebuffList()
-      -- showTargetBars() -- Show Glyph of Mind Spike stacks on Mind Flay icon
     end
 
-    if (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or (type == "SPELL_CAST_SUCCESS" and (spellName == "Devouring Plague" or spellName == "Void Entropy" or spellName == "Psychic Horror")) then
+    if cfg.showOrbText and (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or (type == "SPELL_CAST_SUCCESS" and (spellName == "Devouring Plague" or spellName == "Void Entropy" or spellName == "Psychic Horror")) then
       updateOrbsText()
     end
 
-    if isInList(type, relevantTypes) and sourceGUID == UnitGUID("player") and (isInList(spellName, buffs) or isInList(spellName, cooldowns) or isInList(spellName, debuffs)) then
+    if isInList(type, relevantTypes) and sourceGUID == UnitGUID("player") and (isInList(spellName, cfg.buffs) or isInList(spellName, cfg.cooldowns) or isInList(spellName, cfg.debuffs)) then
 
       local unitID = "player"
       for unit, _ in pairs(units) do
@@ -387,19 +495,19 @@ local function processEvents(self, event, ...)
         end
       end
 
-      if isInList(spellName, buffs) then
+      if isInList(spellName, cfg.buffs) then
         local expires = select(7, UnitBuff("player", spellName)) or 0
 
         if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" then -- Note that since SPELL_AURA_APPLIED_DOSE fires when you gain stacks but only if you are not already at max stacks we're not handling that type at all here; the timer for each stacked buff is started here, and then RunTimer takes care of reapplications
           targetBars[spellName].active = true
           runTimer(targetBars[spellName], expires)
         end
-      elseif isInList(spellName, cooldowns) then
+      elseif isInList(spellName, cfg.cooldowns) then
         if type == "SPELL_CAST_SUCCESS" then
           targetBars[spellName].active = true
           runTimer(targetBars[spellName], 0) -- Expire time is checked in RunTimer for cooldowns, so no need to try to get or use it here
         end
-      elseif isInList(spellName, debuffs) then
+      elseif isInList(spellName, cfg.debuffs) then
         local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER"))
 
         if expires ~= nil and (type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH") then
@@ -425,11 +533,21 @@ local function desaturate(texture, desaturating)
   end
 end
 
-local function checkRange()
-  if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-  else
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+local function onUpdate()
+  if cfg.desaturateSWD then
+    if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
+      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
+    else
+      desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+    end
+  end
+
+  if not cfg.checkRange then
+    return
+  end
+
+  if rc == nil then
+    rc = LibStub("LibRangeCheck-2.0")
   end
 
   if UnitExists("target") then
@@ -492,8 +610,8 @@ f:RegisterEvent("PLAYER_TARGET_CHANGED")
 f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_TALENT_UPDATE")
+f:RegisterEvent("ADDON_LOADED")
 -- f:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 f:SetScript("OnEvent", processEvents)
-f:SetScript("OnUpdate", checkRange)
-init()
-rearrangeTargetBars()
+f:SetScript("OnUpdate", onUpdate)
+-- init()

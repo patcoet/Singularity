@@ -1,4 +1,5 @@
 ## Interface: 60000
+## SavedVariables: SingularityDB
 LibRangeCheck-2.0.lua
 Singularity.lua
 SingularityConfig.lua
