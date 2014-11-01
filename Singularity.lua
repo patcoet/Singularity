@@ -189,7 +189,7 @@ end
 local function init()
   local backdrop = { -- TODO: Configuration options for this
     bgFile = "Interface\\CHATFRAME\\CHATFRAMEBACKGROUND",
-    edgeFile = "Interface\\AddOns\\Radar\\SolidBorder", -- TODO: Change!
+    edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
     tile = false,
     tileSize = 32,
     edgeSize = 1,
