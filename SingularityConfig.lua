@@ -37,7 +37,7 @@ local options = {
       type = "header",
     },
     barContainerGroup = {
-      name = "Bar container frame",
+      name = "Bar container",
       type = "group",
       inline = false,
       args = {
@@ -95,7 +95,7 @@ local options = {
               end,
             },
             barContainerEdgeTexture = {
-              name = "Edge texture",
+              name = "Border texture",
               type = "select",
               order = 3,
               values = AceGUIWidgetLSMlists.border,
@@ -260,7 +260,7 @@ local options = {
       },
     },
     timerBarGroup = {
-      name = "Timer bar frames",
+      name = "Timer bars",
       type = "group",
       inline = false,
       args = {
@@ -305,6 +305,7 @@ local options = {
         iconGroup = {
           name = "Spell icons",
           type = "group",
+          order = 0,
           inline = true,
           args = {
             iconAnchorYOffset = {
@@ -327,9 +328,10 @@ local options = {
             },
           },
         },
-        barTextureGroup = {
-          name = "Bar texture",
+        barColorsGroup = {
+          name = "Bar colors",
           type = "group",
+          order = 0,
           inline = true,
           args = {
             barTextureNormalColor = {
@@ -387,6 +389,7 @@ local options = {
             barBackdropTexture = {
               name = "Backdrop texture",
               type = "select",
+              order = 1,
               values = AceGUIWidgetLSMlists.background,
               dialogControl = "LSM30_Background",
               get = function() return getHandle("background", SingularityDB.bar.backdrop.bgFile) end,
@@ -398,6 +401,7 @@ local options = {
             barBackdropColor = {
               name = "Backdrop color",
               type = "color",
+              order = 0,
               hasAlpha = true,
               get = function()
                 local cfg = SingularityDB.bar.backdrop.color
@@ -415,6 +419,7 @@ local options = {
             barBorderColor = {
               name = "Border color",
               type = "color",
+              order = 2,
               hasAlpha = true,
               get = function()
                 local cfg = SingularityDB.bar.backdrop.borderColor
@@ -430,8 +435,9 @@ local options = {
               end,
             },
             barEdgeTexture = {
-              name = "Edge texture",
+              name = "Border texture",
               type = "select",
+              order = 3,
               values = AceGUIWidgetLSMlists.border,
               dialogControl = "LSM30_Border",
               get = function() return getHandle("border", SingularityDB.bar.backdrop.edgeFile) end,
@@ -443,6 +449,8 @@ local options = {
             barEdgeSize = {
               name = "Edge size",
               type = "range",
+              order = 4,
+              width = "double",
               min = 0,
               softMin = 1,
               softMax = 16,
@@ -456,6 +464,7 @@ local options = {
             barShouldTile = {
               name = "Tile",
               type = "toggle",
+              order = 6,
               get = function() return SingularityDB.bar.backdrop.tile end,
               set = function()
                 local cfg = SingularityDB.bar.backdrop
@@ -466,6 +475,7 @@ local options = {
             barTileSize = {
               name = "Tile size",
               type = "input",
+              order = 5,
               get = function() return tostring(SingularityDB.bar.backdrop.tileSize) end,
               set = function(i, value)
                 SingularityDB.bar.backdrop.tileSize = value

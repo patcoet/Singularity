@@ -103,8 +103,8 @@ local defaults = {
     anchorFrom = "TOP",
     anchorFrame = "UIParent",
     anchorTo = "CENTER",
-    xOffset = -400,
-    yOffset = 0,
+    xOffset = 0,
+    yOffset = -120,
     spacing = 1,
   },
   alwaysShowOrbText = true,
@@ -192,9 +192,9 @@ local targetingEvents = {
   ["UPDATE_MOUSEOVER_UNIT"] = "",
 }
 
-activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
+local activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
 local targetBarContainer = CreateFrame("Frame", nil, UIParent)
-targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
+local targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
 local f = CreateFrame("Frame") -- For RegisterEvent and such
 
 local function isInList(item, list) -- Utility function
@@ -240,11 +240,7 @@ local function setupBar(barFrame)
   b:SetSize(SingularityDB.bar.width, SingularityDB.bar.height)
   b.stackText = b:CreateFontString()
   b.stackText:SetFont(SingularityDB.bar.text.fontPath, SingularityDB.bar.text.fontSize, SingularityDB.bar.text.fontFlags)
-  -- local textAnchor = b
-  -- if SingularityDB.showIcons then
-  --   textAnchor = b.iconTexture
-  -- end
-  -- b.stackText:SetPoint(SingularityDB.bar.text.anchorFrom, textAnchor, SingularityDB.bar.text.anchorTo, SingularityDB.bar.text.xOffset, SingularityDB.bar.text.yOffset)
+
   Singularity_updateFonts()
   b.texture = b:CreateTexture()
   b.texture:SetPoint("LEFT", b, "LEFT", 1, 0)
@@ -281,7 +277,7 @@ end
 
 local function showTargetBars()
   for spellName, frame in pairs(targetBars) do
-    if shouldShowBar(spellName) and spellName ~= "Glyph of Mind Spike" then
+    if spellName ~= "Glyph of Mind Spike" and shouldShowBar(spellName) then
       frame:Show()
     else
       frame:Hide()
@@ -290,7 +286,20 @@ local function showTargetBars()
     if spellName == "Mind Flay" or spellName == "Mind Sear" or spellName == "Insanity" then
       frame.stackText:SetText(select(4, UnitBuff("player", "Glyph of Mind Spike")))
     end
+
+    if spellName == "Surge of Darkness" and shouldShowBar(spellName) then
+      frame.stackText:SetText(select(4, UnitBuff("player", "Surge of Darkness")))
+    end
   end
+
+  if shouldShowBar("Mindbender") then
+    targetBars["Mindbender"]:Show()
+    targetBars["Shadowfiend"]:Hide()
+  else
+    targetBars["Mindbender"]:Hide()
+    targetBars["Shadowfiend"]:Show()
+  end
+
   rearrangeTargetBars()
 end
 
