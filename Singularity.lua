@@ -49,9 +49,9 @@ local defaults = {
     text = {
       anchorFrom = "CENTER",
       anchorTo = "CENTER",
-      fontPath = "Fonts\\FRIZQT__.ttf",
-      fontSize = 14,
-      fontFlags = "OUTLINE",
+      fontPath = "Interface\\AddOns\\Singularity\\Marken.ttf",
+      fontSize = 8,
+      fontFlags = "OUTLINEMONOCHROME",
       xOffset = 1,
       yOffset = 0,
     },
@@ -208,6 +208,20 @@ local function isInList(item, list) -- Utility function
   end
   return false
 end
+
+function Singularity_reloadBars()
+  for spellName, frame in pairs(targetBars) do
+    frame:SetSize(SingularityDB.bar.width, SingularityDB.bar.height)
+    frame:SetBackdrop(SingularityDB.bar.backdrop)
+    frame:SetBackdropBorderColor(SingularityDB.bar.backdrop.borderColor.r, SingularityDB.bar.backdrop.borderColor.g, SingularityDB.bar.backdrop.borderColor.b, SingularityDB.bar.backdrop.borderColor.a)
+    frame:SetBackdropColor(SingularityDB.bar.backdrop.color.r, SingularityDB.bar.backdrop.color.g, SingularityDB.bar.backdrop.color.b, SingularityDB.bar.backdrop.color.a)
+  end
+
+  targetBarContainer:SetBackdrop(SingularityDB.targetContainer.backdrop)
+  targetBarContainer:SetBackdropBorderColor(SingularityDB.targetContainer.backdrop.borderColor.r, SingularityDB.targetContainer.backdrop.borderColor.g, SingularityDB.targetContainer.backdrop.borderColor.b, SingularityDB.targetContainer.backdrop.borderColor.a)
+  targetBarContainer:SetBackdropColor(SingularityDB.targetContainer.backdrop.color.r, SingularityDB.targetContainer.backdrop.color.g, SingularityDB.targetContainer.backdrop.color.b, SingularityDB.targetContainer.backdrop.color.a)
+end
+
 
 local function setupBar(barFrame)
   local b = barFrame
@@ -476,11 +490,6 @@ end
 
 local function processEvents(self, event, ...)
   if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then
-    -- if SingularityDB == nil then -- TODO: Uncomment
-      -- SingularityDB = defaults
-    -- end
-    -- SingularityDB = SingularityDB
-
     SingularityDB = SingularityDB or {}
 
     for k,v in pairs(defaults) do
@@ -488,9 +497,6 @@ local function processEvents(self, event, ...)
         SingularityDB[k] = v
       -- end
     end
-
-    -- C_Timer.After(7, function() createOptions("Singularity") end)
-    createOptions("Singularity")
 
     init()
     rearrangeTargetBars()

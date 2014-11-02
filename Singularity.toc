@@ -1,6 +1,6 @@
 ## Interface: 60000
 ## SavedVariables: SingularityDB
-tekKonfig\tekKonfig.xml
+AceConfig-3.0\AceConfig-3.0.xml
 LibRangeCheck-2.0.lua
 Singularity.lua
 SingularityConfig.lua
