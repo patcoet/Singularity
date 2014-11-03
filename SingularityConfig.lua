@@ -1,5 +1,4 @@
 -- TODO: Make sure all inputs get validated, sliders have good values, etc.
--- TODO: Anchor inputs should be selects
 
 local sm = LibStub("LibSharedMedia-3.0")
 sm:Register("border", "Solid", "Interface\\AddOns\\Singularity\\SolidBorder")

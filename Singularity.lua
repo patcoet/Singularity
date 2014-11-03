@@ -1,11 +1,13 @@
--- TODO: Sort functions and stuff before releasing
 -- TODO: Do all TODOs
--- TODO: Probably remove a bunch of for pairs do things
 -- TODO: Refactor literally everything
 -- TODO: Check that we're not passing more information around than we need to
+-- TODO: Mouseover DoTs display, reordering of spells in config
 
-local rc
+local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 
+
+
+-- Lookup tables
 local defaults = {
   bar = {
     backdrop = {
@@ -47,7 +49,6 @@ local defaults = {
       anchorFrom = "CENTER",
       anchorTo = "CENTER",
       fontPath = "Interface\\AddOns\\Singularity\\Marken.ttf",
-      -- fontPath = "Fonts\\FRIZQT__.ttf",
       fontSize = 8,
       fontFlags = "THINOUTLINEMONOCHROME",
       xOffset = 1,
@@ -172,42 +173,39 @@ local defaults = {
     ["Void Entropy"] = 155361,
   },
 }
-
 local units = {
   ["player"] = "",
   ["target"] = "",
-  -- ["focus"] = "",
   ["mouseover"] = "",
-  -- ["boss1"] = "",
-  -- ["boss2"] = "",
-  -- ["boss3"] = "",
-  -- ["boss4"] = "",
-  -- ["boss5"] = "",
 }
-
 local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
   ["SPELL_CAST_SUCCESS"] = "",
   ["SPELL_AURA_APPLIED"] = "",
-  -- "SPELL_PERIODIC_DAMAGE",
   ["SPELL_AURA_REFRESH"] = "",
   ["SPELL_AURA_REMOVED"] = "",
   ["SPELL_AURA_APPLIED_DOSE"] = "",
 }
-
 local targetingEvents = {
   ["PLAYER_TARGET_CHANGED"] = "",
   ["UPDATE_MOUSEOVER_UNIT"] = "",
 }
 
-local activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
-targetBarContainer = CreateFrame("Frame", nil, UIParent)
-targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
-gcdBar = CreateFrame("Frame", "GCD indicator", targetBarContainer)
-gcdBar:SetFrameStrata("HIGH")
-gcdBar.texture = gcdBar:CreateTexture()
-local f = CreateFrame("Frame") -- For RegisterEvent and such
 
-local function isInList(item, list) -- Utility function
+
+-- Utility functions
+local function desaturate(texture, desaturating)
+  local shaderSupported = texture:SetDesaturated(desaturating)
+
+  if not shaderSupported then
+    if desaturating then
+      texture:SetVertexColor(0.5, 0.5, 0.5)
+    else
+      texture:SetVertexColor(1, 1, 1)
+    end
+  end
+end
+
+local function isInList(item, list)
   for k, v in pairs(list) do
     if k == item then
       return true
@@ -216,6 +214,31 @@ local function isInList(item, list) -- Utility function
   return false
 end
 
+local function shouldShowBar(spellName)
+  for row = 1, 7 do
+    for column = 1, 3 do
+      local _, name, _, enabled = GetTalentInfo(row, column, GetActiveSpecGroup())
+      if name == spellName:gsub("Shadow Word: ", "") and not enabled then
+        return false
+      end
+    end
+  end
+
+  return true
+end
+
+local function c(r, g, b)
+  if shouldShowBar("Halo") then
+    targetBars["Halo"].stackText:SetTextColor(r, g, b, 1)
+  elseif shouldShowBar["Divine Star"] then
+    targetBars["Divine Star"].stackText:SetTextColor(r, g, b, 1)
+  elseif shouldShowBar["Cascade"] then
+    targetBars["Cascade"].stackText:SetTextColor(r, g, b, 1)
+  end
+end
+
+
+-- Main functions
 local function rearrangeTargetBars()
   local numBars = 1
   for _, spellName in ipairs(SingularityDB.barDisplayOrder) do
@@ -235,56 +258,6 @@ local function rearrangeTargetBars()
   targetBarContainer:SetHeight((SingularityDB.bar.height + SingularityDB.bar.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
   gcdBar:SetSize(SingularityDB.bar.width - SingularityDB.bar.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 3)
   gcdBar.texture:SetHeight(gcdBar:GetHeight())
-end
-
-local function setupBar(barFrame)
-  local b = barFrame
-  b.iconTexture = b:CreateTexture()
-  if SingularityDB.showIcons then
-    b.iconTexture:SetPoint("RIGHT", b, "LEFT", SingularityDB.bar.icon.xOffset, SingularityDB.bar.icon.yOffset)
-    b.iconTexture:SetSize(SingularityDB.bar.icon.size, SingularityDB.bar.icon.size)
-    b.iconTexture:SetTexCoord(SingularityDB.bar.icon.coords.l, SingularityDB.bar.icon.coords.r, SingularityDB.bar.icon.coords.t, SingularityDB.bar.icon.coords.b)
-    b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
-  end
-  b:SetBackdrop(SingularityDB.bar.backdrop)
-  b:SetBackdropColor(SingularityDB.bar.backdrop.color.r, SingularityDB.bar.backdrop.color.g, SingularityDB.bar.backdrop.color.b, SingularityDB.bar.backdrop.color.a)
-  b:SetBackdropBorderColor(SingularityDB.bar.backdrop.borderColor.r, SingularityDB.bar.backdrop.borderColor.g, SingularityDB.bar.backdrop.borderColor.b, SingularityDB.bar.backdrop.borderColor.a)
-  b:SetSize(SingularityDB.bar.width, SingularityDB.bar.height)
-  b.stackText = b:CreateFontString()
-  b.stackText:SetFont(SingularityDB.bar.text.fontPath, SingularityDB.bar.text.fontSize, SingularityDB.bar.text.fontFlags)
-
-  Singularity_updateFonts()
-  b.texture = b:CreateTexture()
-  b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
-  b.texture:SetHeight(SingularityDB.bar.height - SingularityDB.bar.texture.inset)
-end
-
-local function shouldShowBar(spellName)
-  local function missingTalent(row, column)
-    return not select(4, GetTalentInfo(row, column, GetActiveSpecGroup()))
-  end
-
-  if spellName == "Surge of Darkness" and missingTalent(3, 1) then
-    return false
-  elseif spellName == "Mindbender" and missingTalent(3, 2) then
-    return false
-  elseif spellName == "Shadow Word: Insanity" and missingTalent(3, 3) then
-    return false
-  elseif spellName == "Power Infusion" and missingTalent(5, 2) then
-    return false
-  elseif spellName == "Shadowy Insight" and missingTalent(5, 3) then
-    return false
-  elseif spellName == "Cascade" and missingTalent(6, 1) then
-    return false
-  elseif spellName == "Divine Star" and missingTalent(6, 2) then
-    return false
-  elseif spellName == "Halo" and missingTalent(6, 3) then
-    return false
-  elseif spellName == "Void Entropy" and missingTalent(7, 2) then
-    return false
-  else
-    return true
-  end
 end
 
 local function showTargetBars()
@@ -315,50 +288,6 @@ local function showTargetBars()
   rearrangeTargetBars()
 end
 
-local function init()
-  for k, v in pairs(SingularityDB.cooldowns) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    setupBar(targetBars[k])
-  end
-  for k, v in pairs(SingularityDB.buffs) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    setupBar(targetBars[k])
-  end
-  for k, v in pairs(SingularityDB.debuffs) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    targetBars[k].checkForSafeTime = true
-    setupBar(targetBars[k])
-  end
-
-  showTargetBars()
-  if targetBars["Mind Sear"] ~= nil then
-    targetBars["Mind Sear"]:SetAlpha(0)
-  end
-  if targetBars["Insanity"] ~= nil then
-    targetBars["Insanity"]:SetAlpha(0)
-  end
-  targetBarContainer:SetPoint(SingularityDB.targetContainer.anchorFrom, SingularityDB.targetContainer.anchorFrame, SingularityDB.targetContainer.anchorTo, SingularityDB.targetContainer.xOffset, SingularityDB.targetContainer.yOffset)
-  targetBarContainer:SetBackdrop(SingularityDB.targetContainer.backdrop)
-  targetBarContainer:SetBackdropBorderColor(SingularityDB.targetContainer.backdrop.borderColor.r, SingularityDB.targetContainer.backdrop.borderColor.g, SingularityDB.targetContainer.backdrop.borderColor.b, SingularityDB.targetContainer.backdrop.borderColor.a)
-  targetBarContainer:SetBackdropColor(SingularityDB.targetContainer.backdrop.color.r, SingularityDB.targetContainer.backdrop.color.g, SingularityDB.targetContainer.backdrop.color.b, SingularityDB.targetContainer.backdrop.color.a)
-  local extra = 0
-  if SingularityDB.showIcons then
-    extra = SingularityDB.bar.icon.size
-  end
-  targetBarContainer:SetSize(SingularityDB.bar.width + SingularityDB.targetContainer.spacing, 0)
-
-  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0)
-  gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
-
-  Singularity_reloadBars()
-end
-
 local function runTimer(frame, expires)
   frame:SetScript("OnUpdate", function()
     if not frame.active then
@@ -375,7 +304,6 @@ local function runTimer(frame, expires)
       end
       local timeLeft = expires - GetTime()
 
-
       if timeLeft > 0 then
         if frame:GetName() == "GCD indicator" then
           local cfg = SingularityDB.gcdColor
@@ -388,7 +316,8 @@ local function runTimer(frame, expires)
         else
           local b = SingularityDB.baseDurations[frame:GetName()]
           if b and timeLeft < b * 0.3 + select(4, GetSpellInfo(frame:GetName())) / 1000 or false then -- 30% of base + cast time
-            frame.texture:SetTexture(SingularityDB.bar.texture.alert.r,SingularityDB.bar.texture.alert.g,SingularityDB.bar.texture.alert.b,SingularityDB.bar.texture.alert.a)
+            local cfg = SingularityDB.bar.texture.alert
+            frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
           end
           frame.texture:SetWidth((SingularityDB.bar.width - SingularityDB.bar.texture.inset) * timeLeft / SingularityDB.bar.maxTime)
         end
@@ -422,7 +351,16 @@ local function readFromDebuffList()
   end
 
   showTargetBars()
-  rearrangeTargetBars()
+end
+
+local function removeFromDebuffList(targetGUID, spellName) -- Remove one entry from the debuff list
+  for k, v in ipairs(activeDebuffs) do
+    if v["targetGUID"] == targetGUID and v["spellName"] == spellName then
+      table.remove(activeDebuffs, k)
+      readFromDebuffList()
+      return
+    end
+  end
 end
 
 local function insertIntoDebuffList(targetGUID, targetName, spellName, spellID, expires) -- Add one entry to the debuff list
@@ -437,13 +375,228 @@ local function insertIntoDebuffList(targetGUID, targetName, spellName, spellID, 
   readFromDebuffList()
 end
 
-local function removeFromDebuffList(targetGUID, spellName) -- Remove one entry from the debuff list
-  for k, v in ipairs(activeDebuffs) do
-    if v["targetGUID"] == targetGUID and v["spellName"] == spellName then
-      table.remove(activeDebuffs, k)
-      readFromDebuffList()
+
+
+-- Global functions called from SingularityConfig
+function Singularity_reloadBars()
+  local cfg
+  for spellName, frame in pairs(targetBars) do
+    cfg = SingularityDB.bar
+    frame:SetSize(cfg.width, cfg.height)
+    frame:SetBackdrop(cfg.backdrop)
+    cfg = cfg.backdrop.borderColor
+    frame:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
+    cfg = SingularityDB.bar.backdrop.color
+    frame:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
+    cfg = SingularityDB.bar
+    frame.texture:SetSize(cfg.width - cfg.texture.inset, cfg.height - cfg.texture.inset)
+    cfg = cfg.icon
+    frame.iconTexture:SetSize(cfg.size, cfg.size)
+    frame.iconTexture:SetPoint("RIGHT", frame, "LEFT", cfg.xOffset, 0)
+  end
+
+  cfg = SingularityDB.targetContainer
+  targetBarContainer:SetBackdrop(cfg.backdrop)
+  cfg = cfg.backdrop.borderColor
+  targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
+  cfg = SingularityDB.targetContainer.backdrop.color
+  targetBarContainer:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
+
+  cfg = SingularityDB.bar.icon
+  local width = SingularityDB.bar.width + SingularityDB.targetContainer.spacing + cfg.size + -cfg.xOffset + 1
+
+  targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.size + -cfg.xOffset + 2)
+
+  cfg = SingularityDB.targetContainer
+  targetBarContainer:SetParent(cfg.parentFrame)
+
+  targetBarContainer:ClearAllPoints()
+  targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+
+  rearrangeTargetBars()
+end
+
+function Singularity_updateFonts()
+  local cfg = SingularityDB.bar.text
+  for k, v in pairs(targetBars) do
+    v.stackText:SetFont(cfg.fontPath, cfg.fontSize, cfg.fontFlags)
+    v.stackText:ClearAllPoints()
+    v.stackText:SetPoint(cfg.anchorFrom, v.iconTexture, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  end
+end
+
+function Singularity_updateOrbsText()
+  local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
+  if not SingularityDB.alwaysShowOrbText then
+    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
+  end
+  if not SingularityDB.showOrbText then
+    orbs = ""
+  end
+
+  local text = targetBars["Mind Blast"].stackText
+
+  if orbs >= 3 then
+    text:SetTextColor(0, 1, 0, 1)
+  else
+    text:SetTextColor(1, 1, 1, 1)
+  end
+
+  text:SetText(orbs)
+end
+
+
+
+-- Startup stuff
+local function init()
+  local function setupBar(barFrame) -- Should be replaced with Singularity_reloadBars
+    local b = barFrame
+    local cfg
+    b.iconTexture = b:CreateTexture()
+    if SingularityDB.showIcons then
+      cfg = SingularityDB.bar.icon
+      b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
+      b.iconTexture:SetSize(cfg.size, cfg.size)
+      cfg = cfg.coords
+      b.iconTexture:SetTexCoord(cfg.l, cfg.r, cfg.t, cfg.b)
+      b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
+    end
+    cfg = SingularityDB.bar.backdrop
+    b:SetBackdrop(cfg)
+    cfg = cfg.color
+    b:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
+    cfg = SingularityDB.bar.backdrop.borderColor
+    b:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
+    cfg = SingularityDB.bar
+    b:SetSize(cfg.width, cfg.height)
+    b.stackText = b:CreateFontString()
+    cfg = cfg.text
+    b.stackText:SetFont(cfg.fontPath, cfg.fontSize, cfg.fontFlags)
+
+    Singularity_updateFonts()
+    b.texture = b:CreateTexture()
+    b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
+
+    cfg = SingularityDB.bar
+    b.texture:SetHeight(cfg.height - cfg.texture.inset)
+  end
+
+  activeDebuffs = {} -- A list of all DoTs we have active; {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
+  targetBarContainer = CreateFrame("Frame", nil, UIParent)
+  targetBars = {} -- A list of bar frames for the target+player units; {["spellName"] = CreateFrame(), ...}
+
+  for k, v in pairs(SingularityDB.cooldowns) do
+    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
+    targetBars[k].active = false
+    targetBars[k].spellID = v
+    setupBar(targetBars[k])
+  end
+  for k, v in pairs(SingularityDB.buffs) do
+    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
+    targetBars[k].active = false
+    targetBars[k].spellID = v
+    setupBar(targetBars[k])
+  end
+  for k, v in pairs(SingularityDB.debuffs) do
+    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
+    targetBars[k].active = false
+    targetBars[k].spellID = v
+    targetBars[k].checkForSafeTime = true
+    setupBar(targetBars[k])
+  end
+
+  gcdBar = CreateFrame("Frame", "GCD indicator", targetBarContainer)
+  gcdBar.texture = gcdBar:CreateTexture()
+
+  showTargetBars()
+
+  if targetBars["Mind Sear"] ~= nil then
+    targetBars["Mind Sear"]:SetAlpha(0)
+  end
+  if targetBars["Insanity"] ~= nil then
+    targetBars["Insanity"]:SetAlpha(0)
+  end
+
+  local cfg = SingularityDB.targetContainer
+  targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  targetBarContainer:SetBackdrop(cfg.backdrop)
+  cfg = cfg.backdrop.borderColor
+  targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
+  cfg = SingularityDB.targetContainer.backdrop.color
+  targetBarContainer:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
+  targetBarContainer:SetSize(SingularityDB.bar.width + SingularityDB.targetContainer.spacing, 0)
+
+  gcdBar:SetFrameStrata("HIGH")
+  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0)
+  gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
+
+  Singularity_reloadBars()
+end
+
+local function onUpdate()
+  if SingularityDB.desaturateSWD then
+    if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
+      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
+    else
+      desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+    end
+  else
+    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+  end
+
+  if not SingularityDB.checkRange then
+    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
+    return
+  end
+
+  if rc == nil then
+    rc = LibStub("LibRangeCheck-2.0")
+  end
+
+  if UnitExists("target") then
+    local minRange, maxRange = rc:GetRange("target")
+    if maxRange == nil then
       return
     end
+
+    if shouldShowBar("Cascade") then
+      targetBars["Cascade"].stackText:SetText(maxRange)
+      if maxRange < 40 then
+        c(1, 1, 0)
+      elseif maxRange == 40 then
+        c(0, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    elseif shouldShowBar("Divine Star") then
+      targetBars["Divine Star"].stackText:SetText(maxRange)
+      if maxRange < 25 then
+        c(0, 1, 0)
+      elseif maxRange == 25 then
+        c(1, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    elseif shouldShowBar("Halo") then
+      targetBars["Halo"].stackText:SetText(maxRange)
+      if maxRange <= 15 then
+        c(1, 0, 0)
+      elseif minRange == 15 and maxRange == 20 then
+        c(1, 1, 0)
+      elseif minRange == 20 and maxRange == 25 then
+        c(0, 1, 0)
+      elseif minRange == 25 and maxRange == 30 then
+        c(1, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    end
+  else
+    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
   end
 end
 
@@ -459,6 +612,7 @@ local function processEvents(self, event, ...)
 
     init()
     rearrangeTargetBars()
+    f:SetScript("OnUpdate", onUpdate)
     f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     f:RegisterEvent("PLAYER_TARGET_CHANGED")
     f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
@@ -554,160 +708,7 @@ local function processEvents(self, event, ...)
   end
 end
 
-local function desaturate(texture, desaturating)
-  local shaderSupported = texture:SetDesaturated(desaturating)
-
-  if not shaderSupported then
-    if desaturating then
-      texture:SetVertexColor(0.5, 0.5, 0.5)
-    else
-      texture:SetVertexColor(1, 1, 1)
-    end
-  end
-end
-
-local function onUpdate()
-  if SingularityDB.desaturateSWD then
-    if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
-      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-    else
-      desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
-    end
-  else
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
-  end
-
-  if not SingularityDB.checkRange then
-    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
-    return
-  end
-
-  if rc == nil then
-    rc = LibStub("LibRangeCheck-2.0")
-  end
-
-  if UnitExists("target") then
-    local minRange, maxRange = rc:GetRange("target")
-    if maxRange == nil then
-      return
-    end
-
-    local function c(r, g, b)
-      -- targetBarContainer:SetBackdropBorderColor(r, g, b, 1)
-      for _, v in ipairs({"Cascade", "Divine Star", "Halo"}) do
-        if shouldShowBar(v) then
-          targetBars[v].stackText:SetTextColor(r, g, b, 1)
-          break
-        end
-      end
-    end
-
-    if shouldShowBar("Cascade") then
-      targetBars["Cascade"].stackText:SetText(maxRange)
-      if maxRange < 40 then
-        c(1, 1, 0)
-      elseif maxRange == 40 then
-        c(0, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Divine Star") then
-      targetBars["Divine Star"].stackText:SetText(maxRange)
-      if maxRange < 25 then
-        c(0, 1, 0)
-      elseif maxRange == 25 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Halo") then
-      targetBars["Halo"].stackText:SetText(maxRange)
-      if maxRange <= 15 then
-        c(1, 0, 0)
-      elseif minRange == 15 and maxRange == 20 then
-        c(1, 1, 0)
-      elseif minRange == 20 and maxRange == 25 then
-        c(0, 1, 0)
-      elseif minRange == 25 and maxRange == 30 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    end
-  else
-    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
-  end
-end
-
+f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", processEvents)
-f:SetScript("OnUpdate", onUpdate)
-
-function Singularity_reloadBars()
-  local cfg = SingularityDB.bar
-  for spellName, frame in pairs(targetBars) do
-    frame:SetSize(cfg.width, cfg.height)
-    frame:SetBackdrop(cfg.backdrop)
-    frame:SetBackdropBorderColor(cfg.backdrop.borderColor.r, cfg.backdrop.borderColor.g, cfg.backdrop.borderColor.b, cfg.backdrop.borderColor.a)
-    frame:SetBackdropColor(cfg.backdrop.color.r, cfg.backdrop.color.g, cfg.backdrop.color.b, cfg.backdrop.color.a)
-    frame.texture:SetSize(cfg.width - cfg.texture.inset, cfg.height - cfg.texture.inset)
-    frame.iconTexture:SetSize(cfg.icon.size, cfg.icon.size)
-    frame.iconTexture:SetPoint("RIGHT", frame, "LEFT", cfg.icon.xOffset, 0)
-    if SingularityDB.showIcons then
-      frame.iconTexture:Show()
-    else
-      frame.iconTexture:Hide()
-    end
-  end
-
-  cfg = SingularityDB.targetContainer
-  targetBarContainer:SetBackdrop(cfg.backdrop)
-  targetBarContainer:SetBackdropBorderColor(cfg.backdrop.borderColor.r, cfg.backdrop.borderColor.g, cfg.backdrop.borderColor.b, cfg.backdrop.borderColor.a)
-  targetBarContainer:SetBackdropColor(cfg.backdrop.color.r, cfg.backdrop.color.g, cfg.backdrop.color.b, cfg.backdrop.color.a)
-  local width = SingularityDB.bar.width + cfg.spacing
-  if SingularityDB.showIcons then
-    width = width + SingularityDB.bar.icon.size + -SingularityDB.bar.icon.xOffset + 1
-  end
-
-  targetBarContainer:SetWidth(width + cfg.spacing + 1)
-  targetBarContainer:SetParent(cfg.parentFrame)
-
-  targetBarContainer:ClearAllPoints()
-  targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-
-  rearrangeTargetBars()
-end
-
-function Singularity_updateFonts()
-  local cfg = SingularityDB.bar.text
-  for k, v in pairs(targetBars) do
-    v.stackText:SetFont(cfg.fontPath, cfg.fontSize, cfg.fontFlags)
-    v.stackText:ClearAllPoints()
-    v.stackText:SetPoint(cfg.anchorFrom, v.iconTexture, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  end
-end
-
-function Singularity_updateOrbsText()
-  local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
-  if not SingularityDB.alwaysShowOrbText then
-    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
-  end
-  if not SingularityDB.showOrbText then
-    orbs = ""
-  end
-
-  local text = targetBars["Mind Blast"].stackText
-
-  if orbs >= 3 then
-    text:SetTextColor(0, 1, 0, 1)
-  else
-    text:SetTextColor(1, 1, 1, 1)
-  end
-
-  text:SetText(orbs)
-end
