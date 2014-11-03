@@ -176,7 +176,7 @@ local defaults = {
 local units = {
   ["player"] = "",
   ["target"] = "",
-  ["mouseover"] = "",
+  -- ["mouseover"] = "",
 }
 local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
   ["SPELL_CAST_SUCCESS"] = "",
