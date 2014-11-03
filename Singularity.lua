@@ -41,7 +41,7 @@ local defaults = {
         b = 0.9,
       },
       size = 20,
-      xOffset = 0,
+      xOffset = -1,
     },
     text = {
       anchorFrom = "CENTER",
@@ -193,8 +193,10 @@ local targetingEvents = {
 }
 
 local activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
-local targetBarContainer = CreateFrame("Frame", nil, UIParent)
-local targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
+targetBarContainer = CreateFrame("Frame", nil, UIParent)
+targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
+gcdBar = CreateFrame("Frame", nil, targetBarContainer)
+gcdBar.texture = gcdBar:CreateTexture()
 local f = CreateFrame("Frame") -- For RegisterEvent and such
 
 local function isInList(item, list) -- Utility function
@@ -223,6 +225,8 @@ local function rearrangeTargetBars()
     end
   end
   targetBarContainer:SetHeight((SingularityDB.bar.height + SingularityDB.bar.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
+  gcdBar:SetSize(SingularityDB.bar.width - SingularityDB.bar.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 3)
+  gcdBar.texture:SetHeight(gcdBar:GetHeight())
 end
 
 local function setupBar(barFrame)
@@ -243,7 +247,7 @@ local function setupBar(barFrame)
 
   Singularity_updateFonts()
   b.texture = b:CreateTexture()
-  b.texture:SetPoint("LEFT", b, "LEFT", 1, 0)
+  b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
   b.texture:SetHeight(SingularityDB.bar.height - SingularityDB.bar.texture.inset)
 end
 
@@ -340,6 +344,10 @@ local function init()
     extra = SingularityDB.bar.icon.size
   end
   targetBarContainer:SetSize(SingularityDB.bar.width + SingularityDB.targetContainer.spacing, 0)
+
+  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0)
+  gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
+
   Singularity_reloadBars()
 end
 
@@ -441,7 +449,12 @@ local function processEvents(self, event, ...)
     f:RegisterEvent("PLAYER_TARGET_CHANGED")
     f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
     f:RegisterEvent("PLAYER_TALENT_UPDATE")
+    f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
     f:UnregisterEvent("ADDON_LOADED")
+  elseif event == "CURRENT_SPELL_CAST_CHANGED" then
+    gcdBar.active = true
+    local start, duration = GetSpellCooldown(61304)
+    runTimer(gcdBar, start + duration)
   elseif isInList(event, targetingEvents) then
     for spell, _ in pairs(SingularityDB.debuffs) do
       targetBars[spell].active = false
@@ -647,7 +660,7 @@ function Singularity_reloadBars()
     width = width + SingularityDB.bar.icon.size + -SingularityDB.bar.icon.xOffset + 1
   end
 
-  targetBarContainer:SetWidth(width + cfg.spacing + 2)
+  targetBarContainer:SetWidth(width + cfg.spacing + 1)
 
   targetBarContainer:ClearAllPoints()
   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
