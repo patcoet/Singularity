@@ -107,6 +107,12 @@ local defaults = {
     yOffset = -120,
     spacing = 1,
   },
+  gcdColor = {
+    r = 1,
+    g = 0,
+    b = 1,
+    a = 0.3,
+  },
   alwaysShowOrbText = true,
   checkRange = true,
   desaturateSWD = true,
@@ -195,7 +201,8 @@ local targetingEvents = {
 local activeDebuffs = {} -- A list of all DoTs we have active. {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
 targetBarContainer = CreateFrame("Frame", nil, UIParent)
 targetBars = {} -- A list of bar frames for the target+player units. {["spellName"] = CreateFrame(), ...}
-gcdBar = CreateFrame("Frame", nil, targetBarContainer)
+gcdBar = CreateFrame("Frame", "GCD indicator", targetBarContainer)
+gcdBar:SetFrameStrata("HIGH")
 gcdBar.texture = gcdBar:CreateTexture()
 local f = CreateFrame("Frame") -- For RegisterEvent and such
 
@@ -367,8 +374,14 @@ local function runTimer(frame, expires)
       end
       local timeLeft = expires - GetTime()
 
+
       if timeLeft > 0 then
-        frame.texture:SetTexture(SingularityDB.bar.texture.color.r,SingularityDB.bar.texture.color.g,SingularityDB.bar.texture.color.b,SingularityDB.bar.texture.color.a)
+        if frame:GetName() == "GCD indicator" then
+          local cfg = SingularityDB.gcdColor
+          frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
+        else
+          frame.texture:SetTexture(SingularityDB.bar.texture.color.r,SingularityDB.bar.texture.color.g,SingularityDB.bar.texture.color.b,SingularityDB.bar.texture.color.a)
+        end
         if timeLeft >= SingularityDB.bar.maxTime then
           frame.texture:SetWidth(SingularityDB.bar.width - SingularityDB.bar.texture.inset)
         else

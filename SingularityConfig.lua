@@ -334,6 +334,24 @@ local options = {
           order = 0,
           inline = true,
           args = {
+            gcdBarColor = {
+              name = "GCD color",
+              desc = "Color used to display the global cooldown",
+              type = "color",
+              hasAlpha = true,
+              get = function()
+                local cfg = SingularityDB.gcdColor
+                return cfg.r, cfg.g, cfg.b, cfg.a
+              end,
+              set = function(i, r, g, b, a)
+                local cfg = SingularityDB.gcdColor
+                cfg.r = r
+                cfg.g = g
+                cfg.b = b
+                cfg.a = a
+                Singularity_reloadBars()
+              end,
+            },
             barTextureNormalColor = {
               name = "Normal color",
               type = "color",
