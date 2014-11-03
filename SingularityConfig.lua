@@ -195,8 +195,18 @@ local options = {
         barContainerAnchorGroup = {
           name = "Anchor",
           type = "group",
-          inline = false,
+          inline = true,
           args = {
+            barContainerParentFrame = {
+              name = "Parent frame",
+              type = "input",
+              order = 0,
+              get = function() return SingularityDB.targetContainer.parentFrame end,
+              set = function(i, value)
+                SingularityDB.targetContainer.parentFrame = value
+                Singularity_reloadBars()
+              end,
+            },
             barContainerAnchorFrom = {
               name = "Anchor from",
               type = "select",
@@ -210,7 +220,7 @@ local options = {
             barContainerAnchorFrame = {
               name = "Anchor frame",
               type = "input",
-              width = "double",
+              order = 0,
               get = function() return SingularityDB.targetContainer.anchorFrame end,
               set = function(i, value)
                 SingularityDB.targetContainer.anchorFrame = value

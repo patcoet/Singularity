@@ -40,7 +40,7 @@ local defaults = {
         t = 0.1,
         b = 0.9,
       },
-      size = 20,
+      size = 16,
       xOffset = -1,
     },
     text = {
@@ -55,21 +55,21 @@ local defaults = {
     },
     texture = {
       alert = {
-        r = 0.7,
-        g = 0,
+        r = 0,
+        g = 0.5,
         b = 0,
         a = 1,
       },
       color = {
-        r = 0.7,
-        g = 0.7,
-        b = 0.7,
+        r = 0.5,
+        g = 0.5,
+        b = 0.5,
         a = 1,
       },
       path = "Interface\\Buttons\\WHITE8X8",
       inset = 0,
     },
-    height = 20,
+    height = 16,
     maxTime = 12,
     spacing = 1,
     width = 200,
@@ -103,15 +103,16 @@ local defaults = {
     anchorFrom = "TOP",
     anchorFrame = "UIParent",
     anchorTo = "CENTER",
+    parentFrame = "UIParent",
     xOffset = 0,
-    yOffset = -120,
+    yOffset = -150,
     spacing = 1,
   },
   gcdColor = {
     r = 1,
-    g = 0,
+    g = 1,
     b = 1,
-    a = 0.3,
+    a = 0.5,
   },
   alwaysShowOrbText = true,
   checkRange = true,
@@ -674,6 +675,7 @@ function Singularity_reloadBars()
   end
 
   targetBarContainer:SetWidth(width + cfg.spacing + 1)
+  targetBarContainer:SetParent(cfg.parentFrame)
 
   targetBarContainer:ClearAllPoints()
   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
