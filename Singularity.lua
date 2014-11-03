@@ -482,7 +482,7 @@ local function init()
   end
 
   activeDebuffs = {} -- A list of all DoTs we have active; {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
-  targetBarContainer = CreateFrame("Frame", nil, UIParent)
+  targetBarContainer = CreateFrame("Frame", "Singularity bar container", UIParent)
   targetBars = {} -- A list of bar frames for the target+player units; {["spellName"] = CreateFrame(), ...}
 
   for k, v in pairs(SingularityDB.cooldowns) do
@@ -535,7 +535,7 @@ end
 
 local function onUpdate()
   if SingularityDB.desaturateSWD then
-    if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
+    if UnitHealth("target") > UnitHealthMax("target") * 0.2 or not UnitExists("target") then
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
     else
       desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
@@ -605,9 +605,9 @@ local function processEvents(self, event, ...)
     SingularityDB = SingularityDB or {}
 
     for k,v in pairs(defaults) do
-      -- if type(SingularityDB[k]) == "nil" then -- TODO: Uncomment before release, dummy
+      if type(SingularityDB[k]) == "nil" then -- TODO: Uncomment before release, dummy
         SingularityDB[k] = v
-      -- end
+      end
     end
 
     init()
