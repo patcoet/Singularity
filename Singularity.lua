@@ -1,9 +1,6 @@
 -- TODO: Low-level support
 if UnitClass("player") ~= "Priest" then
-  return
-end
-local _, currSpec = GetSpecializationInfo(GetSpecialization())
-if currSpec ~= "Shadow" then
+  DisableAddOn("Singularity")
   return
 end
 
@@ -611,7 +608,7 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PLAYER_ENTERING_WORLD" then -- Recheck buffs and cooldowns after reloading UI (which deselects the player's target, so no need to check for target debuffs here)
+  if event == "PLAYER_ENTERING_WORLD" and currSpec == "Shadow" then -- Recheck buffs and cooldowns after reloading UI (which deselects the player's target, so no need to check for target debuffs here)
     for spellName, _ in pairs(SingularityDB.buffs) do
       local expires = select(7, UnitBuff("player", spellName))
       if expires then
@@ -679,7 +676,9 @@ local function processEvents(self, event, ...)
     if UnitExists("target") then
       f:SetScript("OnUpdate", onUpdate)
 
-      if SingularityDB.hideWithNoTarget then
+      local _, currSpec = GetSpecializationInfo(GetSpecialization())
+
+      if SingularityDB.hideWithNoTarget and currSpec == "Shadow" then
         targetBarContainer:Show()
       end
 

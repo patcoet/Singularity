@@ -1,12 +1,3 @@
-if UnitClass("player") ~= "Priest" then
-  return
-end
-
-local _, currSpec = GetSpecializationInfo(GetSpecialization())
-if currSpec ~= "Shadow" then
-  return
-end
-
 local sm = LibStub("LibSharedMedia-3.0")
 sm:Register("border", "Solid", "Interface\\AddOns\\Singularity\\SolidBorder")
 sm:Register("font", "Marke Eigenbau", "Interface\\AddOns\\Singularity\\Marken.ttf")
