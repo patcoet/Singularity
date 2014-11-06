@@ -137,8 +137,6 @@ local defaults = {
     "Cascade",
     "Halo",
     "Mindbender",
-    "Void Entropy",
-    "Shadowfiend",
   },
   baseDurations = {
     ["Shadow Word: Pain"] = 18,
@@ -168,7 +166,6 @@ local defaults = {
     ["Mind Sear"] = 48045,
     ["Vampiric Touch"] = 34914,
     ["Shadow Word: Pain"] = 589,
-    ["Void Entropy"] = 155361,
   },
   hiddenSpells = {
     ["Glyph of Mind Spike"] = "",
