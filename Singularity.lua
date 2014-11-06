@@ -1,6 +1,6 @@
 -- TODO: Do all TODOs
--- TODO: Clean up libraries
 -- TODO: Go through all the WoWI performance tips (after everything else is done)
+-- TODO: Test at lower levels - init do nothing if not Shadow
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 

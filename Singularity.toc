@@ -4,7 +4,6 @@ LibStub.lua
 CallbackHandler-1.0.lua
 AceGUI-3.0\AceGUI-3.0.xml
 AceConfig-3.0\AceConfig-3.0.xml
-AceConsole-3.0\AceConsole-3.0.xml
 LibSharedMedia-3.0.lua
 AceGUI-3.0-SharedMediaWidgets\widget.xml
 LibRangeCheck-2.0.lua

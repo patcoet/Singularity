@@ -1,8 +1,6 @@
 local sm = LibStub("LibSharedMedia-3.0")
 sm:Register("border", "Solid", "Interface\\AddOns\\Singularity\\SolidBorder")
 sm:Register("font", "Marke Eigenbau", "Interface\\AddOns\\Singularity\\Marken.ttf")
-sm:Register("font", "PF Arma Five", "Interface\\AddOns\\Singularity\\pf_arma_five.ttf")
-sm:Register("font", "Manaspace", "Interface\\AddOns\\Singularity\\manaspc.ttf")
 
 local function getHandle(type, path)
   local table = sm:HashTable(type)
