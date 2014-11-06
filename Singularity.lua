@@ -361,9 +361,7 @@ function Singularity_reloadBars()
           numBars = numBars + 1
         end
         local xOffset = SingularityDB.targetContainer.spacing
-        if SingularityDB.showIcons then
-          xOffset = xOffset + SingularityDB.bar.icon.width - SingularityDB.bar.icon.xOffset + 1
-        end
+        xOffset = xOffset + SingularityDB.bar.icon.width - SingularityDB.bar.icon.xOffset + 1
         targetBars[spellName]:SetPoint("TOPLEFT", targetBarContainer, "TOPLEFT", xOffset, -(SingularityDB.bar.height + SingularityDB.bar.spacing) * (numBars - 1) - SingularityDB.targetContainer.spacing - 1)
       end
     end
@@ -517,14 +515,12 @@ local function init()
     b.spellID = spellID
     local cfg
     b.iconTexture = b:CreateTexture()
-    if SingularityDB.showIcons then
-      cfg = SingularityDB.bar.icon
-      b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
-      b.iconTexture:SetSize(cfg.width, cfg.height)
-      cfg = cfg.coords
-      b.iconTexture:SetTexCoord(cfg.l, cfg.r, cfg.t, cfg.b)
-      b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
-    end
+    cfg = SingularityDB.bar.icon
+    b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
+    b.iconTexture:SetSize(cfg.width, cfg.height)
+    cfg = cfg.coords
+    b.iconTexture:SetTexCoord(cfg.l, cfg.r, cfg.t, cfg.b)
+    b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
     cfg = SingularityDB.bar.backdrop
     b:SetBackdrop(cfg)
     cfg = cfg.color
