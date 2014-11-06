@@ -2,6 +2,9 @@
 -- TODO: Refactor literally everything
 -- TODO: Check that we're not passing more information around than we need to
 -- TODO: Mouseover DoTs display, reordering of spells in config
+-- TODO: Rework runTimer and readFromDebuffList
+-- TODO: s/Mind Flay/Smite/
+-- TODO: Make sure Surge of Darkness and Glyph of Mind Spike are being handled
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 
@@ -153,6 +156,11 @@ local defaults = {
     ["Surge of Darkness"] = 87160,
     -- ["Shadowy Insight"] = 124430,
   },
+  channeledSpells = {
+    "Insanity",
+    "Mind Flay",
+    "Mind Sear",
+  },
   cooldowns = {
     ["Shadow Word: Death"] = 32379,
     ["Mind Blast"] = 8092,
@@ -161,7 +169,7 @@ local defaults = {
     ["Halo"] = 120644,
     ["Mindbender"] = 123040,
     -- ["Power Infusion"] = 10060,
-    ["Shadowfiend"] = 34433,
+    -- ["Shadowfiend"] = 34433,
   },
   debuffs = {
     ["Mind Flay"] = 15407,
@@ -172,11 +180,19 @@ local defaults = {
     ["Shadow Word: Pain"] = 589,
     ["Void Entropy"] = 155361,
   },
+  hiddenSpells = {
+    ["Glyph of Mind Spike"] = "",
+  },
+  orbSpenders = {
+    ["Devouring Plague"] = "",
+    ["Void Entropy"] = "",
+    ["Psychic Horror"] = "",
+  },
 }
 local units = {
   ["player"] = "",
   ["target"] = "",
-  -- ["mouseover"] = "",
+  ["mouseover"] = "",
 }
 local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
   ["SPELL_CAST_SUCCESS"] = "",
@@ -188,6 +204,7 @@ local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
 local targetingEvents = {
   ["PLAYER_TARGET_CHANGED"] = "",
   ["UPDATE_MOUSEOVER_UNIT"] = "",
+  ["CURSOR_UPDATE"] = "",
 }
 
 
@@ -215,6 +232,10 @@ local function isInList(item, list)
 end
 
 local function shouldShowBar(spellName)
+  if isInList(spellName, SingularityDB.hiddenSpells) then
+    return false
+  end
+
   for row = 1, 7 do
     for column = 1, 3 do
       local _, name, _, enabled = GetTalentInfo(row, column, GetActiveSpecGroup())
@@ -228,156 +249,105 @@ local function shouldShowBar(spellName)
 end
 
 local function c(r, g, b)
-  if shouldShowBar("Halo") then
+  -- if shouldShowBar("Halo") then
     targetBars["Halo"].stackText:SetTextColor(r, g, b, 1)
-  elseif shouldShowBar["Divine Star"] then
+  -- elseif shouldShowBar["Divine Star"] then
     targetBars["Divine Star"].stackText:SetTextColor(r, g, b, 1)
-  elseif shouldShowBar["Cascade"] then
+  -- elseif shouldShowBar["Cascade"] then
     targetBars["Cascade"].stackText:SetTextColor(r, g, b, 1)
-  end
+  -- end
 end
+
 
 
 -- Main functions
-local function rearrangeTargetBars()
-  local numBars = 1
-  for _, spellName in ipairs(SingularityDB.barDisplayOrder) do
-    if targetBars[spellName] ~= nil then
-      if targetBars[spellName]:IsShown() then
-        if spellName ~= "Insanity" and spellName ~= "Mind Flay" and spellName ~= "Mind Sear" then
-          numBars = numBars + 1
-        end
-        local xOffset = SingularityDB.targetContainer.spacing
-        if SingularityDB.showIcons then
-          xOffset = xOffset + SingularityDB.bar.icon.size - SingularityDB.bar.icon.xOffset + 1
-        end
-        targetBars[spellName]:SetPoint("TOPLEFT", targetBarContainer, "TOPLEFT", xOffset, -(SingularityDB.bar.height + SingularityDB.bar.spacing) * (numBars - 1) - SingularityDB.targetContainer.spacing - 1)
-      end
-    end
-  end
-  targetBarContainer:SetHeight((SingularityDB.bar.height + SingularityDB.bar.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
-  gcdBar:SetSize(SingularityDB.bar.width - SingularityDB.bar.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 3)
-  gcdBar.texture:SetHeight(gcdBar:GetHeight())
-end
-
-local function showTargetBars()
-  for spellName, frame in pairs(targetBars) do
-    if spellName ~= "Glyph of Mind Spike" and shouldShowBar(spellName) then
-      frame:Show()
-    else
-      frame:Hide()
-    end
-
-    if spellName == "Mind Flay" or spellName == "Mind Sear" or spellName == "Insanity" then
-      frame.stackText:SetText(select(4, UnitBuff("player", "Glyph of Mind Spike")))
-    end
-
-    if spellName == "Surge of Darkness" and shouldShowBar(spellName) then
-      frame.stackText:SetText(select(4, UnitBuff("player", "Surge of Darkness")))
-    end
-  end
-
-  if shouldShowBar("Mindbender") then
-    targetBars["Mindbender"]:Show()
-    targetBars["Shadowfiend"]:Hide()
-  else
-    targetBars["Mindbender"]:Hide()
-    targetBars["Shadowfiend"]:Show()
-  end
-
-  rearrangeTargetBars()
-end
-
 local function runTimer(frame, expires)
   frame:SetScript("OnUpdate", function()
     if not frame.active then
-      showTargetBars()
+      -- showTargetBars()
       frame.texture:SetTexture(0, 0, 0, 0)
       frame:SetScript("OnUpdate", nil)
     else
-      if frame:GetName() == "Glyph of Mind Spike" or frame:GetName() == "Surge of Darkness" or frame:GetName() == "Shadowy Insight" then
+      if frame:GetName():sub(17) == "Glyph of Mind Spike" or frame:GetName():sub(17) == "Surge of Darkness" or frame:GetName() == "Shadowy Insight" then
         expires = select(7, UnitBuff("player", frame:GetName())) or 0
       end
-      if isInList(frame:GetName(), SingularityDB.cooldowns) then
-        local started, cooldown = GetSpellCooldown(frame:GetName())
-        expires = started + cooldown
+
+      if isInList(frame:GetName():sub(17), SingularityDB.cooldowns) then
+        local startTime, cooldown = GetSpellCooldown(frame:GetName():sub(17))
+        expires = startTime + cooldown
       end
       local timeLeft = expires - GetTime()
 
       if timeLeft > 0 then
-        if frame:GetName() == "GCD indicator" then
-          local cfg = SingularityDB.gcdColor
+        local cfg
+        if frame:GetName() == "Singularity_Bar_GCD" then
+          cfg = SingularityDB.gcdColor
           frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
         else
-          frame.texture:SetTexture(SingularityDB.bar.texture.color.r,SingularityDB.bar.texture.color.g,SingularityDB.bar.texture.color.b,SingularityDB.bar.texture.color.a)
+          cfg = SingularityDB.bar.texture.color
+          frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
         end
         if timeLeft >= SingularityDB.bar.maxTime then
-          frame.texture:SetWidth(SingularityDB.bar.width - SingularityDB.bar.texture.inset)
+          cfg = SingularityDB.bar
+          frame.texture:SetWidth(cfg.width - cfg.texture.inset)
         else
-          local b = SingularityDB.baseDurations[frame:GetName()]
-          if b and timeLeft < b * 0.3 + select(4, GetSpellInfo(frame:GetName())) / 1000 or false then -- 30% of base + cast time
-            local cfg = SingularityDB.bar.texture.alert
+          local spellName = frame:GetName():sub(17)
+          local b = SingularityDB.baseDurations[spellName]
+          if b and timeLeft < b * 0.3 + select(4, GetSpellInfo(spellName)) / 1000 or false then -- 30% of base + cast time
+            cfg = SingularityDB.bar.texture.alert
             frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
           end
-          frame.texture:SetWidth((SingularityDB.bar.width - SingularityDB.bar.texture.inset) * timeLeft / SingularityDB.bar.maxTime)
+          cfg = SingularityDB.bar
+          frame.texture:SetWidth((SingularityDB.bar.width - cfg.texture.inset) * timeLeft / cfg.maxTime)
         end
       else
         frame.active = false
         frame.texture:SetTexture(0, 0, 0, 0)
-        showTargetBars()
+        -- showTargetBars()
         frame:SetScript("OnUpdate", nil)
       end
     end
   end)
 end
 
-local function readFromDebuffList()
+local function readDebuffList()
   for i, entry in ipairs(activeDebuffs) do
     for unit, _ in pairs(units) do
       if UnitGUID(unit) == entry["targetGUID"] then
         targetBars[entry["spellName"]].active = true
         runTimer(targetBars[entry["spellName"]], entry["expires"])
-        if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then
-          for k, v in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
-            if targetBars[v] ~= nil then
+
+        if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then -- Hide the two others
+          for _, spellName in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
+            if targetBars[v] then
               targetBars[v]:SetAlpha(0)
             end
           end
           targetBars[entry["spellName"]]:SetAlpha(1)
         end
+
         break
       end
     end
   end
-
-  showTargetBars()
 end
 
-local function removeFromDebuffList(targetGUID, spellName) -- Remove one entry from the debuff list
-  for k, v in ipairs(activeDebuffs) do
-    if v["targetGUID"] == targetGUID and v["spellName"] == spellName then
-      table.remove(activeDebuffs, k)
-      readFromDebuffList()
+local function updateDebuffList(targetGUID, targetName, spellName, spellID, expires)
+  for n, entry in ipairs(activeDebuffs) do
+    if entry["targetGUID"] == targetGUID and entry["spellName"] == spellName then
+      table.remove(activeDebuffs, n)
       return
     end
   end
-end
 
-local function insertIntoDebuffList(targetGUID, targetName, spellName, spellID, expires) -- Add one entry to the debuff list
-  for k, v in ipairs(activeDebuffs) do
-    if v["targetGUID"] == targetGUID and v["spellName"] == spellName then
-      table.remove(activeDebuffs, k)
-      break
-    end
+  if expires > 0 then
+    table.insert(activeDebuffs, {["targetGUID"] = targetGUID, ["targetName"] = targetName, ["spellName"] = spellName, ["spellID"] = spellID, ["expires"] = expires})
   end
-
-  table.insert(activeDebuffs, {["targetGUID"] = targetGUID, ["targetName"] = targetName, ["spellName"] = spellName, ["spellID"] = spellID, ["expires"] = expires})
-  readFromDebuffList()
 end
 
 
 
--- Global functions called from SingularityConfig
+-- Global functions (called from SingularityConfig)
 function Singularity_reloadBars()
   local cfg
   for spellName, frame in pairs(targetBars) do
@@ -413,7 +383,34 @@ function Singularity_reloadBars()
   targetBarContainer:ClearAllPoints()
   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
 
-  rearrangeTargetBars()
+  for spellName, frame in pairs(targetBars) do
+    if shouldShowBar(spellName) then
+      frame:Show()
+    else
+      frame:Hide()
+    end
+  end
+
+  local numBars = 1
+  for _, spellName in ipairs(SingularityDB.barDisplayOrder) do
+    if targetBars[spellName] ~= nil then
+      if targetBars[spellName]:IsShown() then
+        if spellName ~= "Insanity" and spellName ~= "Mind Flay" and spellName ~= "Mind Sear" then
+          numBars = numBars + 1
+        end
+        local xOffset = SingularityDB.targetContainer.spacing
+        if SingularityDB.showIcons then
+          xOffset = xOffset + SingularityDB.bar.icon.size - SingularityDB.bar.icon.xOffset + 1
+        end
+        targetBars[spellName]:SetPoint("TOPLEFT", targetBarContainer, "TOPLEFT", xOffset, -(SingularityDB.bar.height + SingularityDB.bar.spacing) * (numBars - 1) - SingularityDB.targetContainer.spacing - 1)
+      end
+    end
+  end
+
+  local cfg = SingularityDB.bar
+  targetBarContainer:SetHeight((cfg.height + cfg.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
+  gcdBar:SetSize(cfg.width - cfg.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 3)
+  gcdBar.texture:SetHeight(gcdBar:GetHeight())
 end
 
 function Singularity_updateFonts()
@@ -423,6 +420,9 @@ function Singularity_updateFonts()
     v.stackText:ClearAllPoints()
     v.stackText:SetPoint(cfg.anchorFrom, v.iconTexture, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
   end
+end
+
+function Singularity_updateMindSpikeText()
 end
 
 function Singularity_updateOrbsText()
@@ -449,8 +449,20 @@ end
 
 -- Startup stuff
 local function init()
-  local function setupBar(barFrame) -- Should be replaced with Singularity_reloadBars
-    local b = barFrame
+  local function loadSettings()
+    SingularityDB = SingularityDB or {}
+
+    for k,v in pairs(defaults) do
+    -- if type(SingularityDB[k]) == "nil" then -- TODO: Uncomment before release, dummy
+      SingularityDB[k] = v
+    -- end
+    end
+  end
+
+  local function setupBar(spellName, spellID) -- Should only do things that Singularity_reloadBars() doesn't
+    targetBars[spellName] = CreateFrame("Frame", "Singularity_Bar_" .. spellName, targetBarContainer)
+    local b = targetBars[spellName]
+    b.spellID = spellID
     local cfg
     b.iconTexture = b:CreateTexture()
     if SingularityDB.showIcons then
@@ -479,36 +491,30 @@ local function init()
 
     cfg = SingularityDB.bar
     b.texture:SetHeight(cfg.height - cfg.texture.inset)
+    b.active = false
   end
 
-  activeDebuffs = {} -- A list of all DoTs we have active; {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
-  targetBarContainer = CreateFrame("Frame", "Singularity bar container", UIParent)
-  targetBars = {} -- A list of bar frames for the target+player units; {["spellName"] = CreateFrame(), ...}
+  loadSettings()
 
-  for k, v in pairs(SingularityDB.cooldowns) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    setupBar(targetBars[k])
+  activeDebuffs = {} -- A list of all debuffs the player has active; {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
+  targetBarContainer = CreateFrame("Frame", "Singularity", UIParent)
+  targetBars = {} -- A list of bar frames; {["spellName"] = CreateFrame(), ...}
+
+  for spellName, spellID in pairs(SingularityDB.cooldowns) do
+    setupBar(spellName, spellID)
   end
-  for k, v in pairs(SingularityDB.buffs) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    setupBar(targetBars[k])
+  for spellName, spellID in pairs(SingularityDB.buffs) do
+    setupBar(spellName, spellID)
   end
-  for k, v in pairs(SingularityDB.debuffs) do
-    targetBars[k] = CreateFrame("Frame", k, targetBarContainer)
-    targetBars[k].active = false
-    targetBars[k].spellID = v
-    targetBars[k].checkForSafeTime = true
-    setupBar(targetBars[k])
+  for spellName, spellID in pairs(SingularityDB.debuffs) do
+    setupBar(spellName, spellID)
+    targetBars[spellName].checkForSafeTime = true -- TODO: Is this actually useful?
   end
 
-  gcdBar = CreateFrame("Frame", "GCD indicator", targetBarContainer)
+  gcdBar = CreateFrame("Frame", "Singularity_Bar_GCD", targetBarContainer)
   gcdBar.texture = gcdBar:CreateTexture()
 
-  showTargetBars()
+  -- showTargetBars()
 
   if targetBars["Mind Sear"] ~= nil then
     targetBars["Mind Sear"]:SetAlpha(0)
@@ -527,10 +533,18 @@ local function init()
   targetBarContainer:SetSize(SingularityDB.bar.width + SingularityDB.targetContainer.spacing, 0)
 
   gcdBar:SetFrameStrata("HIGH")
-  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0)
+  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0) -- Note: Depends on there being a Mind Flay bar
   gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
 
   Singularity_reloadBars()
+
+  f:SetScript("OnUpdate", onUpdate)
+  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+  f:RegisterEvent("PLAYER_TARGET_CHANGED")
+  f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+  f:RegisterEvent("PLAYER_TALENT_UPDATE")
+  f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
+  f:UnregisterEvent("ADDON_LOADED")
 end
 
 local function onUpdate()
@@ -601,109 +615,145 @@ local function onUpdate()
 end
 
 local function processEvents(self, event, ...)
-  if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then
-    SingularityDB = SingularityDB or {}
-
-    for k,v in pairs(defaults) do
-      if type(SingularityDB[k]) == "nil" then -- TODO: Uncomment before release, dummy
-        SingularityDB[k] = v
-      end
-    end
-
+  if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then -- Create frames, load options, etc.
     init()
-    rearrangeTargetBars()
-    f:SetScript("OnUpdate", onUpdate)
-    f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    f:RegisterEvent("PLAYER_TARGET_CHANGED")
-    f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-    f:RegisterEvent("PLAYER_TALENT_UPDATE")
-    f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
-    f:UnregisterEvent("ADDON_LOADED")
-  elseif event == "CURRENT_SPELL_CAST_CHANGED" then
-    gcdBar.active = true
-    local start, duration = GetSpellCooldown(61304)
-    runTimer(gcdBar, start + duration)
-  elseif isInList(event, targetingEvents) then
-    for spell, _ in pairs(SingularityDB.debuffs) do
-      targetBars[spell].active = false
-    end
+    return
+  end
 
-    for spellName, spellID in pairs(SingularityDB.debuffs) do
-      local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
-
-      if expires ~= nil then
-        insertIntoDebuffList(UnitGUID("target"), UnitName("target"), spellName, spellID, expires)
-      end
-    end
-    readFromDebuffList()
-  elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
-    for _, v in pairs({"Insanity", "Mind Flay", "Mind Sear"}) do
-      if targetBars[v] ~= nil then
-        targetBars[v].active = false
-      end
-    end
-  elseif event == "PLAYER_ENTERING_WORLD" then
+  if event == "PLAYER_ENTERING_WORLD" then -- Recheck buffs and cooldowns after reloading UI (which deselects the player's target, so no need to check for target debuffs here)
     for spellName, _ in pairs(SingularityDB.buffs) do
       local expires = select(7, UnitBuff("player", spellName))
-      if expires ~= nil then
+      if expires then
         targetBars[spellName].active = true
         runTimer(targetBars[spellName], expires)
       end
     end
-
     for spellName, _ in pairs(SingularityDB.cooldowns) do
       local cd = GetSpellCooldown(spellName)
-      if cd ~= nil and cd ~= 0 then
+      if cd and cd > 0 then
         targetBars[spellName].active = true
         runTimer(targetBars[spellName], 0)
       end
     end
     Singularity_updateOrbsText()
-    readFromDebuffList()
-  elseif event == "PLAYER_TALENT_UPDATE" then
-    showTargetBars()
-  else
-    local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _,spellID, spellName, _, numOrbs, powerType = ...
+    readDebuffList()
+    return
+  end
 
-    if (type == "SPELL_CAST_SUCCESS" or type == "SPELL_AURA_APPLIED_DOSE") and sourceGUID == UnitGUID("player") and spellName == "Mind Spike" then
-      readFromDebuffList()
+  if event == "CURRENT_SPELL_CAST_CHANGED" then -- Fires whenever the player starts or stops casting, so whenever the GCD is started or cancelled
+    gcdBar.active = true
+    local startTime, duration = GetSpellCooldown(61304) -- Global Cooldown
+    runTimer(gcdBar, startTime + duration)
+    return
+  end
+
+  if event == "PLAYER_TALENT_UPDATE" then -- Make sure the right bars are shown
+    Singularity_reloadBars()
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_CHANNEL_STOP" and ... == "player" then -- Clear the Insanity/Mind Flay/Mind Sear bar when the player stops channeling
+    for _, spellName in ipairs(SingularityDB.channeledSpells) do
+      if targetBars[spellName] then
+        targetBars[spellName].active = false
+      end
+    end
+    return
+  end
+
+  if isInList(event, targetingEvents) then -- When the player changes targets (or, with the option enabled, mouses over an enemy), clear the current debuff timers and replace them with the debuff timers for the new target
+    if event ~= "PLAYER_TARGET_CHANGED" and not SingularityDB.mouseover then -- If the mouseover option is not enabled, disregard mouseover events
+      return
     end
 
-    if (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or (type == "SPELL_CAST_SUCCESS" and (spellName == "Devouring Plague" or spellName == "Void Entropy" or spellName == "Psychic Horror")) then
+    for spellName, _ in pairs(SingularityDB.debuffs) do
+      targetBars[spellName].active = false
+    end
+
+    local unitID = "target" -- Check debuffs on target by default
+
+    if SingularityDB.mouseover and UnitCanAttack("player", "mouseover") then -- UnitCanAttack returns false here if mouseover doesn't exist
+      unitID = "mouseover" -- ...Or on mouseover instead if the option is enabled and mouseover exists
+    end
+
+    for spellName, spellID in pairs(SingularityDB.debuffs) do
+      local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER"))
+
+      if expires then
+        updateDebuffList(UnitGUID(unitID), UnitName(unitID), spellName, spellID, expires)
+      end
+    end
+    readDebuffList()
+    return
+  end
+
+  if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends (TODO: Check if the second check is necessary), update cooldown bars
+    for spellName, spellID in pairs(SingularityDB.cooldowns) do
+      local startTime, duration = GetSpellCooldown(spellID)
+      targetBars[spellName].active = true
+      -- print(spellName, duration)
+      runTimer(targetBars[spellName], startTime + duration)
+    end
+    return
+  end
+
+  if event == "COMBAT_LOG_EVENT_UNFILTERED" then -- This is the only event left that we're listening for, so this check isn't really necessary...
+    local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _, spellID, spellName, _, numOrbs, powerType = ...
+
+    if sourceGUID ~= UnitGUID("player") then -- We're only interested in spells cast by the player
+      return
+    end
+
+    if (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or isInList(spellName, SingularityDB.orbSpenders) then -- If the spell generates or spends Shadow Orbs, update the Shadow Orbs display
       Singularity_updateOrbsText()
+      return
     end
 
-    if isInList(type, relevantTypes) and sourceGUID == UnitGUID("player") and (isInList(spellName, SingularityDB.buffs) or isInList(spellName, SingularityDB.cooldowns) or isInList(spellName, SingularityDB.debuffs)) then
-
-      local unitID = "player"
-      for unit, _ in pairs(units) do
-        if UnitGUID(unit) == targetGUID then
-          unitID = unit
+    if type == "SPELL_CAST_SUCCESS" and spellName == "Mind Spike" then -- If the player casts Mind Spike and is using Glyph of Mind Spike, update the Glyph of Mind Spike counter
+      local glyphIsInUse = false
+      for i = 1, 6 do
+        if select(4, GetGlyphSocketInfo(i, GetActiveSpecGroup())) == 33371 then
+          glyphIsInUse = true
         end
       end
+      if not glyphIsInUse then
+        return
+      end
 
+      Singularity_updateMindSpikeText()
+      return
+    end
+
+    if type == "SPELL_CAST_SUCCESS" and isInList(spellName, SingularityDB.cooldowns) then
+      -- for spellName, spellID in pairs(SingularityDB.cooldowns) do
+        local startTime, duration = GetSpellCooldown(spellID)
+        targetBars[spellName].active = true
+        print(spellName, duration)
+        runTimer(targetBars[spellName], startTime + duration)
+      -- end
+    end
+
+    if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" or type == "SPELL_AURA_REMOVED" then -- Buffs and debuffs
       if isInList(spellName, SingularityDB.buffs) then
-        local expires = select(7, UnitBuff("player", spellName)) or 0
-
-        if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" then -- Note that since SPELL_AURA_APPLIED_DOSE fires when you gain stacks but only if you are not already at max stacks we're not handling that type at all here; the timer for each stacked buff is started here, and then RunTimer takes care of reapplications
-          targetBars[spellName].active = true
-          runTimer(targetBars[spellName], expires)
-        end
-      elseif isInList(spellName, SingularityDB.cooldowns) then
-        if type == "SPELL_CAST_SUCCESS" then
-          targetBars[spellName].active = true
-          runTimer(targetBars[spellName], 0) -- Expire time is checked in RunTimer for cooldowns, so no need to try to get or use it here
-        end
-      elseif isInList(spellName, SingularityDB.debuffs) then
-        local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER"))
-
-        if expires ~= nil and (type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH") then
-          insertIntoDebuffList(targetGUID, targetName, spellName, spellID, expires)
-        elseif type == "SPELL_AURA_REMOVED" then
-          removeFromDebuffList(targetGUID, spellName)
-        end
+        local expires = select(7, UnitBuff("player", spellName)) or 0 -- 0 if the buff isn't on the target, i.e. if we got here from SPELL_AURA_REMOVED
+        targetBars[spellName].active = true
+        runTimer(targetBars[spellName], expires)
       end
-      showTargetBars()
+
+      if isInList(spellName, SingularityDB.debuffs) then
+        local unitID = "target"
+
+        if SingularityDB.mouseover and UnitCanAttack("player", "mouseover") then -- UnitCanAttack returns false here if mouseover doesn't exist
+          unitID = "mouseover"
+        end
+
+        local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
+        updateDebuffList(targetGUID, targetName, spellName, spellID, expires)
+        readDebuffList()
+      end
+
+      Singularity_reloadBars()
+      return
     end
   end
 end
@@ -712,3 +762,4 @@ f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", processEvents)
+-- f:RegisterAllEvents()
