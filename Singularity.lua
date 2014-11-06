@@ -1,11 +1,8 @@
 -- TODO: Do all TODOs
--- TODO: Refactor literally everything
 -- TODO: Check that we're not passing more information around than we need to
--- TODO: Reordering of spells in config, autohide
+-- TODO: Reordering of spells in config, autohide, hide 0 numbers, /singularity (/sng?), (make sure everything left in defaults can be configured)
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
-
-
 
 -- Lookup tables
 local defaults = {
@@ -42,7 +39,8 @@ local defaults = {
         t = 0.1,
         b = 0.9,
       },
-      size = 16,
+      height = 16,
+      width = 16,
       xOffset = -1,
     },
     text = {
@@ -115,11 +113,9 @@ local defaults = {
     b = 1,
     a = 0.5,
   },
-  alwaysShowOrbText = true,
-  checkRange = true,
-  desaturateSWD = true,
-  showIcons = true,
-  showOrbText = true,
+  alwaysShowOrbText = false,
+  alwaysShowSurgeText = false,
+  alwaysShowSpikeText = false,
 
   barDisplayOrder = {
     "Insanity",
@@ -128,7 +124,6 @@ local defaults = {
     "Devouring Plague",
     "Shadow Word: Insanity",
     "Mind Blast",
-    "Glyph of Mind Spike",
     "Shadow Word: Death",
     "Surge of Darkness",
     "Shadowy Insight",
@@ -139,7 +134,6 @@ local defaults = {
     "Halo",
     "Mindbender",
     "Void Entropy",
-    "Power Infusion",
     "Shadowfiend",
   },
   baseDurations = {
@@ -150,7 +144,6 @@ local defaults = {
     ["Shadow Word: Insanity"] = 132573,
     ["Glyph of Mind Spike"] = 81292,
     ["Surge of Darkness"] = 87160,
-    -- ["Shadowy Insight"] = 124430,
   },
   channeledSpells = {
     "Insanity",
@@ -164,14 +157,11 @@ local defaults = {
     ["Cascade"] = 127632,
     ["Halo"] = 120644,
     ["Mindbender"] = 123040,
-    -- ["Power Infusion"] = 10060,
-    -- ["Shadowfiend"] = 34433,
   },
   debuffs = {
     ["Mind Flay"] = 15407,
     ["Insanity"] = 129197,
     ["Mind Sear"] = 48045,
-    -- ["Devouring Plague"] = 158831,
     ["Vampiric Touch"] = 34914,
     ["Shadow Word: Pain"] = 589,
     ["Void Entropy"] = 155361,
@@ -184,17 +174,6 @@ local defaults = {
     ["Void Entropy"] = "",
     ["Psychic Horror"] = "",
   },
-}
-local units = {
-  ["player"] = "",
-  ["target"] = "",
-}
-local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
-  ["SPELL_CAST_SUCCESS"] = "",
-  ["SPELL_AURA_APPLIED"] = "",
-  ["SPELL_AURA_REFRESH"] = "",
-  ["SPELL_AURA_REMOVED"] = "",
-  ["SPELL_AURA_APPLIED_DOSE"] = "",
 }
 
 
@@ -299,22 +278,18 @@ local function runTimer(frame, expires)
 end
 
 local function readDebuffList()
-  for i, entry in ipairs(activeDebuffs) do
-    for unit, _ in pairs(units) do
-      if UnitGUID(unit) == entry["targetGUID"] then
-        targetBars[entry["spellName"]].active = true
-        runTimer(targetBars[entry["spellName"]], entry["expires"])
+  for _, entry in ipairs(activeDebuffs) do
+    if UnitGUID("target") == entry["targetGUID"] then
+      targetBars[entry["spellName"]].active = true
+      runTimer(targetBars[entry["spellName"]], entry["expires"])
 
-        if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then -- Hide the two others
-          for _, spellName in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
-            if targetBars[v] then
-              targetBars[v]:SetAlpha(0)
-            end
+      if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then -- Hide the two others
+        for _, spellName in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
+          if targetBars[spellName] then
+            targetBars[spellName]:SetAlpha(0)
           end
-          targetBars[entry["spellName"]]:SetAlpha(1)
         end
-
-        break
+        targetBars[entry["spellName"]]:SetAlpha(1)
       end
     end
   end
@@ -349,7 +324,8 @@ function Singularity_reloadBars()
     cfg = SingularityDB.bar
     frame.texture:SetSize(cfg.width - cfg.texture.inset, cfg.height - cfg.texture.inset)
     cfg = cfg.icon
-    frame.iconTexture:SetSize(cfg.size, cfg.size)
+    frame.iconTexture:SetTexCoord(cfg.coords.l, cfg.coords.r, cfg.coords.t, cfg.coords.b)
+    frame.iconTexture:SetSize(cfg.width, cfg.height)
     frame.iconTexture:SetPoint("RIGHT", frame, "LEFT", cfg.xOffset, 0)
   end
 
@@ -361,9 +337,9 @@ function Singularity_reloadBars()
   targetBarContainer:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
 
   cfg = SingularityDB.bar.icon
-  local width = SingularityDB.bar.width + SingularityDB.targetContainer.spacing + cfg.size + -cfg.xOffset + 1
+  local width = SingularityDB.bar.width + SingularityDB.targetContainer.spacing + cfg.width + -cfg.xOffset + 1
 
-  targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.size + -cfg.xOffset + 2)
+  targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.width + -cfg.xOffset + 2)
 
   cfg = SingularityDB.targetContainer
   targetBarContainer:SetParent(cfg.parentFrame)
@@ -388,7 +364,7 @@ function Singularity_reloadBars()
         end
         local xOffset = SingularityDB.targetContainer.spacing
         if SingularityDB.showIcons then
-          xOffset = xOffset + SingularityDB.bar.icon.size - SingularityDB.bar.icon.xOffset + 1
+          xOffset = xOffset + SingularityDB.bar.icon.width - SingularityDB.bar.icon.xOffset + 1
         end
         targetBars[spellName]:SetPoint("TOPLEFT", targetBarContainer, "TOPLEFT", xOffset, -(SingularityDB.bar.height + SingularityDB.bar.spacing) * (numBars - 1) - SingularityDB.targetContainer.spacing - 1)
       end
@@ -410,7 +386,7 @@ function Singularity_updateFonts()
   end
 end
 
-function Singularity_updateMindSpikeText()
+function Singularity_updateSpikeText()
   local glyphIsInUse = false
   for i = 1, 6 do
     if select(4, GetGlyphSocketInfo(i, GetActiveSpecGroup())) == 33371 then
@@ -421,8 +397,14 @@ function Singularity_updateMindSpikeText()
     return
   end
 
+  local text = select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0
+
+  if text == 0 and not SingularityDB.alwaysShowSpikeText then
+    text = ""
+  end
+
   for _, spellName in ipairs(SingularityDB.channeledSpells) do
-    targetBars["Mind Flay"].stackText:SetText(select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0)
+    targetBars["Mind Flay"].stackText:SetText(text)
   end
 end
 
@@ -431,13 +413,10 @@ function Singularity_updateOrbsText()
   if not SingularityDB.alwaysShowOrbText then
     orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
   end
-  if not SingularityDB.showOrbText then
-    orbs = ""
-  end
 
   local text = targetBars["Mind Blast"].stackText
 
-  if orbs >= 3 then
+  if orbs ~= "" and orbs >= 3 then
     text:SetTextColor(0, 1, 0, 1)
   else
     text:SetTextColor(1, 1, 1, 1)
@@ -451,11 +430,74 @@ function Singularity_updateSurgeText()
     return
   end
 
-  targetBars["Surge of Darkness"].stackText:SetText(select(4, UnitBuff("player", "Surge of Darkness")) or 0)
+  local text = select(4, UnitBuff("player", "Surge of Darkness")) or 0
+
+  if text == 0 and not SingularityDB.alwaysShowSurgeText then
+    text = ""
+  end
+
+  targetBars["Surge of Darkness"].stackText:SetText(text)
 end
 
 
+
 -- Startup stuff
+local function onUpdate()
+  if UnitHealth("target") > UnitHealthMax("target") * 0.2 or not UnitExists("target") then
+    desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
+  else
+    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+  end
+
+  if rc == nil then
+    rc = LibStub("LibRangeCheck-2.0")
+  end
+
+  if UnitExists("target") then
+    local minRange, maxRange = rc:GetRange("target")
+    if maxRange == nil then
+      return
+    end
+
+    if shouldShowBar("Cascade") then
+      targetBars["Cascade"].stackText:SetText(maxRange)
+      if maxRange < 40 then
+        c(1, 1, 0)
+      elseif maxRange == 40 then
+        c(0, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    elseif shouldShowBar("Divine Star") then
+      targetBars["Divine Star"].stackText:SetText(maxRange)
+      if maxRange < 25 then
+        c(0, 1, 0)
+      elseif maxRange == 25 then
+        c(1, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    elseif shouldShowBar("Halo") then
+      targetBars["Halo"].stackText:SetText(maxRange)
+      if maxRange <= 15 then
+        c(1, 0, 0)
+      elseif minRange == 15 and maxRange == 20 then
+        c(1, 1, 0)
+      elseif minRange == 20 and maxRange == 25 then
+        c(0, 1, 0)
+      elseif minRange == 25 and maxRange == 30 then
+        c(1, 1, 0)
+      else
+        c(1, 0, 0)
+      end
+    end
+  else
+    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
+    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
+  end
+end
+
 local function init()
   local function loadSettings()
     SingularityDB = SingularityDB or {}
@@ -476,7 +518,7 @@ local function init()
     if SingularityDB.showIcons then
       cfg = SingularityDB.bar.icon
       b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
-      b.iconTexture:SetSize(cfg.size, cfg.size)
+      b.iconTexture:SetSize(cfg.width, cfg.height)
       cfg = cfg.coords
       b.iconTexture:SetTexCoord(cfg.l, cfg.r, cfg.t, cfg.b)
       b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
@@ -555,73 +597,6 @@ local function init()
   f:UnregisterEvent("ADDON_LOADED")
 end
 
-local function onUpdate()
-  if SingularityDB.desaturateSWD then
-    if UnitHealth("target") > UnitHealthMax("target") * 0.2 or not UnitExists("target") then
-      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-    else
-      desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
-    end
-  else
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
-  end
-
-  if not SingularityDB.checkRange then
-    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
-    return
-  end
-
-  if rc == nil then
-    rc = LibStub("LibRangeCheck-2.0")
-  end
-
-  if UnitExists("target") then
-    local minRange, maxRange = rc:GetRange("target")
-    if maxRange == nil then
-      return
-    end
-
-    if shouldShowBar("Cascade") then
-      targetBars["Cascade"].stackText:SetText(maxRange)
-      if maxRange < 40 then
-        c(1, 1, 0)
-      elseif maxRange == 40 then
-        c(0, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Divine Star") then
-      targetBars["Divine Star"].stackText:SetText(maxRange)
-      if maxRange < 25 then
-        c(0, 1, 0)
-      elseif maxRange == 25 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Halo") then
-      targetBars["Halo"].stackText:SetText(maxRange)
-      if maxRange <= 15 then
-        c(1, 0, 0)
-      elseif minRange == 15 and maxRange == 20 then
-        c(1, 1, 0)
-      elseif minRange == 20 and maxRange == 25 then
-        c(0, 1, 0)
-      elseif minRange == 25 and maxRange == 30 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    end
-  else
-    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
-  end
-end
-
 local function processEvents(self, event, ...)
   if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then -- Create frames, load options, etc.
     init()
@@ -643,7 +618,7 @@ local function processEvents(self, event, ...)
         runTimer(targetBars[spellName], 0)
       end
     end
-    Singularity_updateMindSpikeText()
+    Singularity_updateSpikeText()
     Singularity_updateOrbsText()
     Singularity_updateSurgeText()
     readDebuffList()
@@ -697,13 +672,13 @@ local function processEvents(self, event, ...)
   end
 
   if event == "COMBAT_LOG_EVENT_UNFILTERED" then -- This is the only event left that we're listening for, so this check isn't really necessary...
-    local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _, spellID, spellName, _, numOrbs, powerType = ...
+    local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _, spellID, spellName, _, _, powerType = ...
 
     if sourceGUID ~= UnitGUID("player") then -- We're only interested in spells cast by the player
       return
     end
 
-    if type == "SPELL_PERIODIC_DAMAGE" and (spellName == "Vampiric Touch" or spellName == "Devouring Plague") then -- TODO: Slow updates because of latency here?
+    if type == "SPELL_PERIODIC_DAMAGE" and (spellName == "Vampiric Touch" or spellName == "Devouring Plague") then
       Singularity_updateSurgeText()
     end
 
@@ -713,16 +688,14 @@ local function processEvents(self, event, ...)
     end
 
     if type == "SPELL_CAST_SUCCESS" and spellName == "Mind Spike" then -- If the player casts Mind Spike and is using Glyph of Mind Spike, update the Glyph of Mind Spike counter
-      Singularity_updateMindSpikeText() -- TODO: Slow updates because of latency here?
+      Singularity_updateSpikeText()
       return
     end
 
     if type == "SPELL_CAST_SUCCESS" and isInList(spellName, SingularityDB.cooldowns) then
-      -- for spellName, spellID in pairs(SingularityDB.cooldowns) do
-        local startTime, duration = GetSpellCooldown(spellID)
-        targetBars[spellName].active = true
-        runTimer(targetBars[spellName], startTime + duration)
-      -- end
+      local startTime, duration = GetSpellCooldown(spellID)
+      targetBars[spellName].active = true
+      runTimer(targetBars[spellName], startTime + duration)
     end
 
     if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" or type == "SPELL_AURA_REMOVED" or type == "SPELL_AURA_APPLIED_DOSE" then -- Buffs and debuffs
@@ -730,7 +703,7 @@ local function processEvents(self, event, ...)
         local expires = select(7, UnitBuff("player", spellName)) or 0 -- 0 if the buff isn't on the target, i.e. if we got here from SPELL_AURA_REMOVED
         targetBars[spellName].active = true
         runTimer(targetBars[spellName], expires)
-        Singularity_updateMindSpikeText()
+        Singularity_updateSpikeText()
         Singularity_updateSurgeText()
       end
 
@@ -750,4 +723,3 @@ f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", processEvents)
--- f:RegisterAllEvents()

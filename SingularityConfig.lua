@@ -317,7 +317,7 @@ local options = {
           order = 0,
           inline = true,
           args = {
-            iconAnchorYOffset = {
+            iconAnchorXOffset = {
               name = "X offset",
               type = "input",
               get = function() return tostring(SingularityDB.bar.icon.xOffset) end,
@@ -326,14 +326,59 @@ local options = {
                 Singularity_reloadBars()
               end,
             },
-            iconSize = {
-              name = "Size",
+            iconHeight = {
+              name = "Height",
               type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.size) end,
+              get = function() return tostring(SingularityDB.bar.icon.height) end,
               set = function(i, value)
-                SingularityDB.bar.icon.size = value
+                SingularityDB.bar.icon.height = value
                 Singularity_reloadBars()
               end,
+            },
+            iconWidth = {
+              name = "Width",
+              type = "input",
+              get = function() return tostring(SingularityDB.bar.icon.width) end,
+              set = function(i, value)
+                SingularityDB.bar.icon.width = value
+                Singularity_reloadBars()
+              end,
+            },
+            iconCoordLeft = {
+              name = "Left",
+              type = "input",
+              get = function() return tostring(SingularityDB.bar.icon.coords.l) end,
+              set = function(i, value)
+                SingularityDB.bar.icon.coords.l = value
+                Singularity_reloadBars()
+                end,
+            },
+            iconCoordRight = {
+              name = "Right",
+              type = "input",
+              get = function() return tostring(SingularityDB.bar.icon.coords.r) end,
+              set = function(i, value)
+                SingularityDB.bar.icon.coords.r = value
+                Singularity_reloadBars()
+                end,
+            },
+            iconCoordTop = {
+              name = "Top",
+              type = "input",
+              get = function() return tostring(SingularityDB.bar.icon.coords.t) end,
+              set = function(i, value)
+                SingularityDB.bar.icon.coords.t = value
+                Singularity_reloadBars()
+                end,
+            },
+            iconCoordBottom = {
+              name = "Bottom",
+              type = "input",
+              get = function() return tostring(SingularityDB.bar.icon.coords.b) end,
+              set = function(i, value)
+                SingularityDB.bar.icon.coords.b = value
+                Singularity_reloadBars()
+                end,
             },
           },
         },
