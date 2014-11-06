@@ -1,10 +1,7 @@
 -- TODO: Do all TODOs
 -- TODO: Refactor literally everything
 -- TODO: Check that we're not passing more information around than we need to
--- TODO: Mouseover DoTs display, reordering of spells in config
--- TODO: Rework runTimer and readFromDebuffList
--- TODO: s/Mind Flay/Smite/
--- TODO: Make sure Surge of Darkness and Glyph of Mind Spike are being handled
+-- TODO: Reordering of spells in config, autohide
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 
@@ -121,7 +118,6 @@ local defaults = {
   alwaysShowOrbText = true,
   checkRange = true,
   desaturateSWD = true,
-  mouseover = false,
   showIcons = true,
   showOrbText = true,
 
@@ -192,7 +188,6 @@ local defaults = {
 local units = {
   ["player"] = "",
   ["target"] = "",
-  ["mouseover"] = "",
 }
 local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
   ["SPELL_CAST_SUCCESS"] = "",
@@ -200,11 +195,6 @@ local relevantTypes = { -- COMBAT_LOG_EVENT_UNFILTERED subtypes
   ["SPELL_AURA_REFRESH"] = "",
   ["SPELL_AURA_REMOVED"] = "",
   ["SPELL_AURA_APPLIED_DOSE"] = "",
-}
-local targetingEvents = {
-  ["PLAYER_TARGET_CHANGED"] = "",
-  ["UPDATE_MOUSEOVER_UNIT"] = "",
-  ["CURSOR_UPDATE"] = "",
 }
 
 
@@ -249,31 +239,27 @@ local function shouldShowBar(spellName)
 end
 
 local function c(r, g, b)
-  -- if shouldShowBar("Halo") then
-    targetBars["Halo"].stackText:SetTextColor(r, g, b, 1)
-  -- elseif shouldShowBar["Divine Star"] then
-    targetBars["Divine Star"].stackText:SetTextColor(r, g, b, 1)
-  -- elseif shouldShowBar["Cascade"] then
-    targetBars["Cascade"].stackText:SetTextColor(r, g, b, 1)
-  -- end
+  targetBars["Halo"].stackText:SetTextColor(r, g, b, 1)
+  targetBars["Divine Star"].stackText:SetTextColor(r, g, b, 1)
+  targetBars["Cascade"].stackText:SetTextColor(r, g, b, 1)
 end
 
 
 
 -- Main functions
 local function runTimer(frame, expires)
+  local name = frame:GetName():sub(17)
   frame:SetScript("OnUpdate", function()
     if not frame.active then
-      -- showTargetBars()
       frame.texture:SetTexture(0, 0, 0, 0)
       frame:SetScript("OnUpdate", nil)
     else
-      if frame:GetName():sub(17) == "Glyph of Mind Spike" or frame:GetName():sub(17) == "Surge of Darkness" or frame:GetName() == "Shadowy Insight" then
-        expires = select(7, UnitBuff("player", frame:GetName())) or 0
+      if name == "Glyph of Mind Spike" or name == "Surge of Darkness" or name == "Shadowy Insight" then
+        expires = select(7, UnitBuff("player", name)) or 0
       end
 
-      if isInList(frame:GetName():sub(17), SingularityDB.cooldowns) then
-        local startTime, cooldown = GetSpellCooldown(frame:GetName():sub(17))
+      if isInList(name, SingularityDB.cooldowns) then
+        local startTime, cooldown = GetSpellCooldown(name)
         expires = startTime + cooldown
       end
       local timeLeft = expires - GetTime()
@@ -291,7 +277,7 @@ local function runTimer(frame, expires)
           cfg = SingularityDB.bar
           frame.texture:SetWidth(cfg.width - cfg.texture.inset)
         else
-          local spellName = frame:GetName():sub(17)
+          local spellName = name
           local b = SingularityDB.baseDurations[spellName]
           if b and timeLeft < b * 0.3 + select(4, GetSpellInfo(spellName)) / 1000 or false then -- 30% of base + cast time
             cfg = SingularityDB.bar.texture.alert
@@ -303,7 +289,9 @@ local function runTimer(frame, expires)
       else
         frame.active = false
         frame.texture:SetTexture(0, 0, 0, 0)
-        -- showTargetBars()
+        if name == "Surge of Darkness" then
+          Singularity_updateSurgeText()
+        end
         frame:SetScript("OnUpdate", nil)
       end
     end
@@ -336,7 +324,7 @@ local function updateDebuffList(targetGUID, targetName, spellName, spellID, expi
   for n, entry in ipairs(activeDebuffs) do
     if entry["targetGUID"] == targetGUID and entry["spellName"] == spellName then
       table.remove(activeDebuffs, n)
-      return
+      break
     end
   end
 
@@ -423,6 +411,19 @@ function Singularity_updateFonts()
 end
 
 function Singularity_updateMindSpikeText()
+  local glyphIsInUse = false
+  for i = 1, 6 do
+    if select(4, GetGlyphSocketInfo(i, GetActiveSpecGroup())) == 33371 then
+      glyphIsInUse = true
+    end
+  end
+  if not glyphIsInUse then
+    return
+  end
+
+  for _, spellName in ipairs(SingularityDB.channeledSpells) do
+    targetBars["Mind Flay"].stackText:SetText(select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0)
+  end
 end
 
 function Singularity_updateOrbsText()
@@ -445,6 +446,13 @@ function Singularity_updateOrbsText()
   text:SetText(orbs)
 end
 
+function Singularity_updateSurgeText()
+  if not shouldShowBar("Surge of Darkness") then
+    return
+  end
+
+  targetBars["Surge of Darkness"].stackText:SetText(select(4, UnitBuff("player", "Surge of Darkness")) or 0)
+end
 
 
 -- Startup stuff
@@ -539,7 +547,7 @@ local function init()
   Singularity_reloadBars()
 
   f:SetScript("OnUpdate", onUpdate)
-  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") -- TODO: Check that we're using all these events
   f:RegisterEvent("PLAYER_TARGET_CHANGED")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:RegisterEvent("PLAYER_TALENT_UPDATE")
@@ -635,7 +643,9 @@ local function processEvents(self, event, ...)
         runTimer(targetBars[spellName], 0)
       end
     end
+    Singularity_updateMindSpikeText()
     Singularity_updateOrbsText()
+    Singularity_updateSurgeText()
     readDebuffList()
     return
   end
@@ -661,26 +671,16 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if isInList(event, targetingEvents) then -- When the player changes targets (or, with the option enabled, mouses over an enemy), clear the current debuff timers and replace them with the debuff timers for the new target
-    if event ~= "PLAYER_TARGET_CHANGED" and not SingularityDB.mouseover then -- If the mouseover option is not enabled, disregard mouseover events
-      return
-    end
-
+  if event == "PLAYER_TARGET_CHANGED" then -- When the player changes targets, clear the current debuff timers and replace them with the debuff timers for the new target
     for spellName, _ in pairs(SingularityDB.debuffs) do
       targetBars[spellName].active = false
     end
 
-    local unitID = "target" -- Check debuffs on target by default
-
-    if SingularityDB.mouseover and UnitCanAttack("player", "mouseover") then -- UnitCanAttack returns false here if mouseover doesn't exist
-      unitID = "mouseover" -- ...Or on mouseover instead if the option is enabled and mouseover exists
-    end
-
     for spellName, spellID in pairs(SingularityDB.debuffs) do
-      local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER"))
+      local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
 
       if expires then
-        updateDebuffList(UnitGUID(unitID), UnitName(unitID), spellName, spellID, expires)
+        updateDebuffList(UnitGUID("target"), UnitName("target"), spellName, spellID, expires)
       end
     end
     readDebuffList()
@@ -691,7 +691,6 @@ local function processEvents(self, event, ...)
     for spellName, spellID in pairs(SingularityDB.cooldowns) do
       local startTime, duration = GetSpellCooldown(spellID)
       targetBars[spellName].active = true
-      -- print(spellName, duration)
       runTimer(targetBars[spellName], startTime + duration)
     end
     return
@@ -704,23 +703,17 @@ local function processEvents(self, event, ...)
       return
     end
 
+    if type == "SPELL_PERIODIC_DAMAGE" and (spellName == "Vampiric Touch" or spellName == "Devouring Plague") then -- TODO: Slow updates because of latency here?
+      Singularity_updateSurgeText()
+    end
+
     if (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or isInList(spellName, SingularityDB.orbSpenders) then -- If the spell generates or spends Shadow Orbs, update the Shadow Orbs display
       Singularity_updateOrbsText()
       return
     end
 
     if type == "SPELL_CAST_SUCCESS" and spellName == "Mind Spike" then -- If the player casts Mind Spike and is using Glyph of Mind Spike, update the Glyph of Mind Spike counter
-      local glyphIsInUse = false
-      for i = 1, 6 do
-        if select(4, GetGlyphSocketInfo(i, GetActiveSpecGroup())) == 33371 then
-          glyphIsInUse = true
-        end
-      end
-      if not glyphIsInUse then
-        return
-      end
-
-      Singularity_updateMindSpikeText()
+      Singularity_updateMindSpikeText() -- TODO: Slow updates because of latency here?
       return
     end
 
@@ -728,26 +721,21 @@ local function processEvents(self, event, ...)
       -- for spellName, spellID in pairs(SingularityDB.cooldowns) do
         local startTime, duration = GetSpellCooldown(spellID)
         targetBars[spellName].active = true
-        print(spellName, duration)
         runTimer(targetBars[spellName], startTime + duration)
       -- end
     end
 
-    if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" or type == "SPELL_AURA_REMOVED" then -- Buffs and debuffs
+    if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" or type == "SPELL_AURA_REMOVED" or type == "SPELL_AURA_APPLIED_DOSE" then -- Buffs and debuffs
       if isInList(spellName, SingularityDB.buffs) then
         local expires = select(7, UnitBuff("player", spellName)) or 0 -- 0 if the buff isn't on the target, i.e. if we got here from SPELL_AURA_REMOVED
         targetBars[spellName].active = true
         runTimer(targetBars[spellName], expires)
+        Singularity_updateMindSpikeText()
+        Singularity_updateSurgeText()
       end
 
       if isInList(spellName, SingularityDB.debuffs) then
-        local unitID = "target"
-
-        if SingularityDB.mouseover and UnitCanAttack("player", "mouseover") then -- UnitCanAttack returns false here if mouseover doesn't exist
-          unitID = "mouseover"
-        end
-
-        local expires = select(7, UnitDebuff(unitID, spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
+        local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
         updateDebuffList(targetGUID, targetName, spellName, spellID, expires)
         readDebuffList()
       end
