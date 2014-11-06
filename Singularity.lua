@@ -1,6 +1,6 @@
 -- TODO: Do all TODOs
 -- TODO: Check that we're not passing more information around than we need to
--- TODO: Configuration stuff
+-- TODO: Clean up libraries
 -- TODO: Go through all the WoWI performance tips (after everything else is done)
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
@@ -114,10 +114,11 @@ local defaults = {
     b = 1,
     a = 0.5,
   },
-  alwaysShowOrbText = false,
+  alwaysShowOrbsText = false,
   alwaysShowSurgeText = false,
   alwaysShowSpikeText = false,
   hideWithNoTarget = true,
+  updateInterval = 0.15,
 
   barDisplayOrder = {
     "Insanity",
@@ -400,13 +401,13 @@ function Singularity_updateSpikeText()
   end
 
   for _, spellName in ipairs(SingularityDB.channeledSpells) do
-    targetBars["Mind Flay"].stackText:SetText(text)
+    targetBars[spellName].stackText:SetText(text)
   end
 end
 
 function Singularity_updateOrbsText()
   local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
-  if not SingularityDB.alwaysShowOrbText then
+  if not SingularityDB.alwaysShowOrbsText then
     orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
   end
 
@@ -440,10 +441,10 @@ end
 -- Startup stuff
 local function onUpdate(self, elapsed)
   self.dt = self.dt + elapsed
-  if self.dt < 0.05 then -- Update Shadow Word: Death desaturation and range display at most every 50 ms, just in case it might make a difference to someone's FPS sometime
+  if self.dt < SingularityDB.updateInterval then -- Update Shadow Word: Death desaturation and range display at most every 50 ms, just in case it might make a difference to someone's FPS sometime
     return
   else
-    self.dt = self.dt - 0.05
+    self.dt = self.dt - SingularityDB.updateInterval
   end
 
   if UnitHealth("target") > UnitHealthMax("target") * 0.2 then

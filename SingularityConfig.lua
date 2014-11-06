@@ -30,6 +30,70 @@ local anchorPoints = {
 local options = {
   type = "group",
   args = {
+    generalOptionsGroup = {
+      name = "General options",
+      type = "group",
+      args = {
+        alwaysShowOrbText = {
+          name = "Display Shadow Orbs stacks at 0",
+          type = "toggle",
+          get = function() return SingularityDB.alwaysShowOrbsText end,
+          set = function()
+            SingularityDB.alwaysShowOrbsText = not SingularityDB.alwaysShowOrbsText
+            Singularity_updateOrbsText()
+          end,
+        },
+        alwaysShowSpikeText = {
+          name = "Display Glyph of Mind Spike stacks at 0",
+          type = "toggle",
+          get = function() return SingularityDB.alwaysShowSpikeText end,
+          set = function()
+            SingularityDB.alwaysShowSpikeText = not SingularityDB.alwaysShowSpikeText
+            Singularity_updateSpikeText()
+          end,
+        },
+        alwaysShowSurgeText = {
+          name = "Display Surge of Darkness stacks at 0",
+          type = "toggle",
+          get = function() return SingularityDB.alwaysShowSurgeText end,
+          set = function()
+            SingularityDB.alwaysShowSurgeText = not SingularityDB.alwaysShowSurgeText
+            Singularity_updateSurgeText()
+          end,
+        },
+        hideWithNoTarget = {
+          name = "Hide Singularity with no enemy target",
+          type = "toggle",
+          get = function() return SingularityDB.hideWithNoTarget end,
+          set = function()
+            SingularityDB.hideWithNoTarget = not SingularityDB.hideWithNoTarget
+            if SingularityDB.hideWithNoTarget and not UnitExists("target") then
+              Singularity:Hide()
+            else
+              Singularity:Show()
+            end
+          end,
+        },
+        barMaxTime = {
+          name = "Common maximum time",
+          type = "range",
+          min = 1,
+          max = 30,
+          softMin = 4,
+          softMax = 20,
+          get = function() return SingularityDB.bar.maxTime end,
+          set = function(i, value) SingularityDB.bar.maxTime = value end,
+        },
+        updateInterval = {
+          name = "Range display update interval",
+          type = "input",
+          get = function() return tostring(SingularityDB.updateInterval) end,
+          set = function(i, value)
+            SingularityDB.updateInterval = value + 0
+          end,
+        },
+      },
+    },
     header = {
       name = "Appearance options",
       order = 0,
@@ -273,16 +337,6 @@ local options = {
       type = "group",
       inline = false,
       args = {
-        barMaxTime = { -- Is this an appearance or functionality option?
-          name = "Common maximum time",
-          type = "range",
-          min = 1,
-          max = 30,
-          softMin = 4,
-          softMax = 20,
-          get = function() return SingularityDB.bar.maxTime end,
-          set = function(i, value) SingularityDB.bar.maxTime = value end,
-        },
         barHeight = {
           name = "Height",
           type = "input",
