@@ -505,9 +505,9 @@ local function init()
     SingularityDB = SingularityDB or {}
 
     for k,v in pairs(defaults) do
-    -- if type(SingularityDB[k]) == "nil" then -- TODO: Uncomment before release, dummy
-      SingularityDB[k] = v
-    -- end
+      if type(SingularityDB[k]) == "nil" then
+        SingularityDB[k] = v
+      end
     end
   end
 
