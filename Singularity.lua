@@ -1,6 +1,7 @@
 -- TODO: Do all TODOs
 -- TODO: Check that we're not passing more information around than we need to
--- TODO: Reordering of spells in config, /singularity (/sng?), (make sure everything left in defaults can be configured)
+-- TODO: Configuration stuff
+-- TODO: Go through all the WoWI performance tips (after everything else is done)
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 

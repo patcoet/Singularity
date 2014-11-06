@@ -705,3 +705,8 @@ local options = {
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable("Singularity", options, nil)
 LibStub("AceConfigDialog-3.0"):AddToBlizOptions("Singularity")
+
+SLASH_SINGULARITY1, SLASH_SINGULARITY2 = "/singularity", "/sng"
+function SlashCmdList.SINGULARITY()
+  InterfaceOptionsFrame_OpenToCategory("Singularity")
+end
