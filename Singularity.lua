@@ -1,6 +1,6 @@
 -- TODO: Do all TODOs
 -- TODO: Check that we're not passing more information around than we need to
--- TODO: Reordering of spells in config, autohide, hide 0 numbers, /singularity (/sng?), (make sure everything left in defaults can be configured)
+-- TODO: Reordering of spells in config, /singularity (/sng?), (make sure everything left in defaults can be configured)
 
 local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 
@@ -116,6 +116,7 @@ local defaults = {
   alwaysShowOrbText = false,
   alwaysShowSurgeText = false,
   alwaysShowSpikeText = false,
+  hideWithNoTarget = true,
 
   barDisplayOrder = {
     "Insanity",
@@ -215,12 +216,6 @@ local function shouldShowBar(spellName)
   end
 
   return true
-end
-
-local function c(r, g, b)
-  targetBars["Halo"].stackText:SetTextColor(r, g, b, 1)
-  targetBars["Divine Star"].stackText:SetTextColor(r, g, b, 1)
-  targetBars["Cascade"].stackText:SetTextColor(r, g, b, 1)
 end
 
 
@@ -442,8 +437,15 @@ end
 
 
 -- Startup stuff
-local function onUpdate()
-  if UnitHealth("target") > UnitHealthMax("target") * 0.2 or not UnitExists("target") then
+local function onUpdate(self, elapsed)
+  self.dt = self.dt + elapsed
+  if self.dt < 0.05 then -- Update Shadow Word: Death desaturation and range display at most every 50 ms, just in case it might make a difference to someone's FPS sometime
+    return
+  else
+    self.dt = self.dt - 0.05
+  end
+
+  if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
     desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
   else
     desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
@@ -453,48 +455,45 @@ local function onUpdate()
     rc = LibStub("LibRangeCheck-2.0")
   end
 
-  if UnitExists("target") then
-    local minRange, maxRange = rc:GetRange("target")
-    if maxRange == nil then
-      return
-    end
+  local minRange, maxRange = rc:GetRange("target")
+  if maxRange == nil then
+    return
+  end
 
-    if shouldShowBar("Cascade") then
-      targetBars["Cascade"].stackText:SetText(maxRange)
-      if maxRange < 40 then
-        c(1, 1, 0)
-      elseif maxRange == 40 then
-        c(0, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Divine Star") then
-      targetBars["Divine Star"].stackText:SetText(maxRange)
-      if maxRange < 25 then
-        c(0, 1, 0)
-      elseif maxRange == 25 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
-    elseif shouldShowBar("Halo") then
-      targetBars["Halo"].stackText:SetText(maxRange)
-      if maxRange <= 15 then
-        c(1, 0, 0)
-      elseif minRange == 15 and maxRange == 20 then
-        c(1, 1, 0)
-      elseif minRange == 20 and maxRange == 25 then
-        c(0, 1, 0)
-      elseif minRange == 25 and maxRange == 30 then
-        c(1, 1, 0)
-      else
-        c(1, 0, 0)
-      end
+  if shouldShowBar("Cascade") then
+    targetBars["Cascade"].stackText:SetText(maxRange)
+    local t = targetBars["Cascade"].stackText
+    if maxRange < 40 then
+      t:SetTextColor(1, 1, 0, 1)
+    elseif maxRange == 40 then
+      t:SetTextColor(0, 1, 0, 1)
+    else
+      t:SetTextColor(1, 0, 0, 1)
     end
-  else
-    targetBars["Cascade"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Divine Star"].stackText:SetTextColor(1, 1, 1, 0)
-    targetBars["Halo"].stackText:SetTextColor(1, 1, 1, 0)
+  elseif shouldShowBar("Divine Star") then
+    targetBars["Divine Star"].stackText:SetText(maxRange)
+    local t = targetBars["Divine Star"].stackText
+    if maxRange < 25 then
+      t:SetTextColor(0, 1, 0, 1)
+    elseif maxRange == 25 then
+      t:SetTextColor(1, 1, 0, 1)
+    else
+      t:SetTextColor(1, 0, 0, 1)
+    end
+  elseif shouldShowBar("Halo") then
+    targetBars["Halo"].stackText:SetText(maxRange)
+    local t = targetBars["Halo"].stackText
+    if maxRange <= 15 then
+      t:SetTextColor(1, 0, 0, 1)
+    elseif minRange == 15 and maxRange == 20 then
+      t:SetTextColor(1, 1, 0, 1)
+    elseif minRange == 20 and maxRange == 25 then
+      t:SetTextColor(0, 1, 0, 1)
+    elseif minRange == 25 and maxRange == 30 then
+      t:SetTextColor(1, 1, 0, 1)
+    else
+      t:SetTextColor(1, 0, 0, 1)
+    end
   end
 end
 
@@ -553,6 +552,7 @@ local function init()
   for spellName, spellID in pairs(SingularityDB.cooldowns) do
     setupBar(spellName, spellID)
   end
+  desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
   for spellName, spellID in pairs(SingularityDB.buffs) do
     setupBar(spellName, spellID)
   end
@@ -588,7 +588,11 @@ local function init()
 
   Singularity_reloadBars()
 
-  f:SetScript("OnUpdate", onUpdate)
+  if SingularityDB.hideWithNoTarget then
+    targetBarContainer:Hide()
+  end
+
+  -- f:SetScript("OnUpdate", onUpdate)
   f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") -- TODO: Check that we're using all these events
   f:RegisterEvent("PLAYER_TARGET_CHANGED")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
@@ -621,7 +625,6 @@ local function processEvents(self, event, ...)
     Singularity_updateSpikeText()
     Singularity_updateOrbsText()
     Singularity_updateSurgeText()
-    readDebuffList()
     return
   end
 
@@ -651,15 +654,34 @@ local function processEvents(self, event, ...)
       targetBars[spellName].active = false
     end
 
-    for spellName, spellID in pairs(SingularityDB.debuffs) do
-      local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
-
-      if expires then
-        updateDebuffList(UnitGUID("target"), UnitName("target"), spellName, spellID, expires)
+    if not UnitExists("target") or not UnitCanAttack("player", "target") then
+      f:SetScript("OnUpdate", nil)
+      targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
+      targetBars["Divine Star"].stackText:SetTextColor(0, 0, 0, 0)
+      targetBars["Halo"].stackText:SetTextColor(0, 0, 0, 0)
+      if SingularityDB.hideWithNoTarget then
+        targetBarContainer:Hide()
       end
+      return
     end
-    readDebuffList()
-    return
+
+    if UnitExists("target") then
+      f:SetScript("OnUpdate", onUpdate)
+
+      if SingularityDB.hideWithNoTarget then
+        targetBarContainer:Show()
+      end
+
+      for spellName, spellID in pairs(SingularityDB.debuffs) do
+        local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
+
+        if expires then
+          updateDebuffList(UnitGUID("target"), UnitName("target"), spellName, spellID, expires)
+        end
+      end
+      readDebuffList()
+      return
+    end
   end
 
   if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends (TODO: Check if the second check is necessary), update cooldown bars
@@ -671,7 +693,7 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "COMBAT_LOG_EVENT_UNFILTERED" then -- This is the only event left that we're listening for, so this check isn't really necessary...
+  if event == "COMBAT_LOG_EVENT_UNFILTERED" then
     local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _, spellID, spellName, _, _, powerType = ...
 
     if sourceGUID ~= UnitGUID("player") then -- We're only interested in spells cast by the player
@@ -720,6 +742,7 @@ local function processEvents(self, event, ...)
 end
 
 f = CreateFrame("Frame")
+f.dt = 0
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", processEvents)
