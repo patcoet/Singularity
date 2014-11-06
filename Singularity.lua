@@ -1,10 +1,15 @@
--- TODO: Do all TODOs
--- TODO: Go through all the WoWI performance tips (after everything else is done)
--- TODO: Test at lower levels - init do nothing if not Shadow
+-- TODO: Low-level support
+if UnitClass("player") ~= "Priest" then
+  return
+end
+local _, currSpec = GetSpecializationInfo(GetSpecialization())
+if currSpec ~= "Shadow" then
+  return
+end
 
-local activeBuffs, gcdBar, f, rc, targetBarContainer, targetBars
 
--- Lookup tables
+
+local gcdBar, f, rc, targetBarContainer, targetBars
 local defaults = {
   bar = {
     backdrop = {
@@ -690,7 +695,7 @@ local function processEvents(self, event, ...)
     end
   end
 
-  if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends (TODO: Check if the second check is necessary), update cooldown bars
+  if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends, update cooldown bars
     for spellName, spellID in pairs(SingularityDB.cooldowns) do
       local startTime, duration = GetSpellCooldown(spellID)
       targetBars[spellName].active = true
