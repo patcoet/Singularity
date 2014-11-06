@@ -1,5 +1,4 @@
 -- TODO: Do all TODOs
--- TODO: Check that we're not passing more information around than we need to
 -- TODO: Clean up libraries
 -- TODO: Go through all the WoWI performance tips (after everything else is done)
 
@@ -35,13 +34,13 @@ local defaults = {
     },
     icon = {
       coords = {
-        l = 0.1,
-        r = 0.9,
-        t = 0.1,
-        b = 0.9,
+        l = 0.15,
+        r = 0.85,
+        t = 0.15,
+        b = 0.85,
       },
-      height = 16,
-      width = 16,
+      height = 17,
+      width = 17,
       xOffset = -1,
     },
     text = {
@@ -69,10 +68,10 @@ local defaults = {
       path = "Interface\\Buttons\\WHITE8X8",
       inset = 0,
     },
-    height = 16,
-    maxTime = 12,
+    height = 17,
+    maxTime = 8,
     spacing = 1,
-    width = 200,
+    width = 177,
   },
   targetContainer = {
     backdrop = {
@@ -105,8 +104,8 @@ local defaults = {
     anchorTo = "CENTER",
     parentFrame = "UIParent",
     xOffset = 0,
-    yOffset = -150,
-    spacing = 1,
+    yOffset = -162,
+    spacing = 0,
   },
   gcdColor = {
     r = 1,
@@ -292,7 +291,7 @@ local function readDebuffList()
   end
 end
 
-local function updateDebuffList(targetGUID, targetName, spellName, spellID, expires)
+local function updateDebuffList(targetGUID, spellName, expires)
   for n, entry in ipairs(activeDebuffs) do
     if entry["targetGUID"] == targetGUID and entry["spellName"] == spellName then
       table.remove(activeDebuffs, n)
@@ -301,7 +300,7 @@ local function updateDebuffList(targetGUID, targetName, spellName, spellID, expi
   end
 
   if expires > 0 then
-    table.insert(activeDebuffs, {["targetGUID"] = targetGUID, ["targetName"] = targetName, ["spellName"] = spellName, ["spellID"] = spellID, ["expires"] = expires})
+    table.insert(activeDebuffs, {["targetGUID"] = targetGUID, ["spellName"] = spellName, ["expires"] = expires})
   end
 end
 
@@ -390,13 +389,13 @@ function Singularity_updateSpikeText()
       glyphIsInUse = true
     end
   end
-  if not glyphIsInUse then
-    return
-  end
+  -- if not glyphIsInUse then
+  --   return
+  -- end
 
   local text = select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0
 
-  if text == 0 and not SingularityDB.alwaysShowSpikeText then
+  if (text == 0 and not SingularityDB.alwaysShowSpikeText) or not glyphIsInUse then
     text = ""
   end
 
@@ -547,7 +546,7 @@ local function init()
 
   loadSettings()
 
-  activeDebuffs = {} -- A list of all debuffs the player has active; {{["targetGUID"], ["targetName"], ["spellName"], ["spellID"], ["expires"]}, ...}
+  activeDebuffs = {} -- A list of all debuffs the player has active; {{["targetGUID"], ["spellName"], ["expires"]}, ...}
   targetBarContainer = CreateFrame("Frame", "Singularity", UIParent)
   targetBars = {} -- A list of bar frames; {["spellName"] = CreateFrame(), ...}
 
@@ -560,7 +559,6 @@ local function init()
   end
   for spellName, spellID in pairs(SingularityDB.debuffs) do
     setupBar(spellName, spellID)
-    targetBars[spellName].checkForSafeTime = true -- TODO: Is this actually useful?
   end
 
   gcdBar = CreateFrame("Frame", "Singularity_Bar_GCD", targetBarContainer)
@@ -594,8 +592,7 @@ local function init()
     targetBarContainer:Hide()
   end
 
-  -- f:SetScript("OnUpdate", onUpdate)
-  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") -- TODO: Check that we're using all these events
+  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
   f:RegisterEvent("PLAYER_TARGET_CHANGED")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:RegisterEvent("PLAYER_TALENT_UPDATE")
@@ -627,6 +624,13 @@ local function processEvents(self, event, ...)
     Singularity_updateSpikeText()
     Singularity_updateOrbsText()
     Singularity_updateSurgeText()
+    return
+  end
+
+  if event == "PLAYER_TALENT_UPDATE" then
+    Singularity_updateSpikeText()
+    Singularity_updateSurgeText()
+    Singularity_reloadBars()
     return
   end
 
@@ -678,7 +682,7 @@ local function processEvents(self, event, ...)
         local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
 
         if expires then
-          updateDebuffList(UnitGUID("target"), UnitName("target"), spellName, spellID, expires)
+          updateDebuffList(UnitGUID("target"), spellName, expires)
         end
       end
       readDebuffList()
@@ -733,7 +737,7 @@ local function processEvents(self, event, ...)
 
       if isInList(spellName, SingularityDB.debuffs) then
         local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
-        updateDebuffList(targetGUID, targetName, spellName, spellID, expires)
+        updateDebuffList(targetGUID, spellName, expires)
         readDebuffList()
       end
 
