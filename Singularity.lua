@@ -119,7 +119,7 @@ local defaults = {
   alwaysShowSurgeText = false,
   alwaysShowSpikeText = false,
   hideWithNoTarget = true,
-  updateInterval = 0.15,
+  updateInterval = 0.05,
 
   barDisplayOrder = {
     "Insanity",
