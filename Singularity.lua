@@ -592,6 +592,9 @@ local function init()
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:RegisterEvent("PLAYER_TALENT_UPDATE")
   f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
+  f:RegisterEvent("UNIT_ENTERING_VEHICLE")
+  f:RegisterEvent("UNIT_EXITED_VEHICLE")
+  f:RegisterEvent("PET_BATTLE_OPENING_START")
   f:UnregisterEvent("ADDON_LOADED")
 end
 
@@ -685,6 +688,21 @@ local function processEvents(self, event, ...)
       readDebuffList()
       return
     end
+  end
+
+  if event == "UNIT_ENTERING_VEHICLE" then
+    targetBarContainer:Hide()
+    return
+  end
+
+  if event == "UNIT_EXITED_VEHICLE" and not SingularityDB.hideWithNoTarget then
+    targetBarContainer:Show()
+    return
+  end
+
+  if event == "PET_BATTLE_OPENING_START" then
+    targetBarContainer:Hide()
+    return
   end
 
   if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends, update cooldown bars
