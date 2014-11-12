@@ -689,6 +689,25 @@ local function processEvents(self, event, ...)
         end
       end
       readDebuffList()
+
+      for spellName, spellID in pairs(SingularityDB.buffs) do
+        local expires = select(7, UnitBuff("player", spellName))
+
+        if expires then
+          targetBars[spellName].active = true
+          runTimer(targetBars[spellName], expires)
+        end
+      end
+
+      for spellName, spellID in pairs(SingularityDB.cooldowns) do
+        local startTime, duration = GetSpellCooldown(spellID)
+
+        if duration > 0 then
+          targetBars[spellName].active = true
+          runTimer(targetBars[spellName], startTime + duration)
+        end
+      end
+
       return
     end
   end
