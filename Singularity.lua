@@ -597,13 +597,13 @@ local function init()
   end
 
   f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-  f:RegisterEvent("PLAYER_TARGET_CHANGED")
-  f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-  f:RegisterEvent("PLAYER_TALENT_UPDATE")
   f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
+  f:RegisterEvent("PET_BATTLE_OPENING_START")
+  f:RegisterEvent("PLAYER_TALENT_UPDATE")
+  f:RegisterEvent("PLAYER_TARGET_CHANGED")
   f:RegisterEvent("UNIT_ENTERING_VEHICLE")
   f:RegisterEvent("UNIT_EXITED_VEHICLE")
-  f:RegisterEvent("PET_BATTLE_OPENING_START")
+  f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:UnregisterEvent("ADDON_LOADED")
 end
 
@@ -645,11 +645,6 @@ local function processEvents(self, event, ...)
     gcdBar.active = true
     local startTime, duration = GetSpellCooldown(61304) -- Global Cooldown
     runTimer(gcdBar, startTime + duration)
-    return
-  end
-
-  if event == "PLAYER_TALENT_UPDATE" then -- Make sure the right bars are shown
-    Singularity_updateBars()
     return
   end
 

@@ -61,6 +61,26 @@ local options = {
             Singularity_updateSurgeText()
           end,
         },
+        hideShadowfriend = {
+          name = "Hide Shadowfriend bar",
+          type = "toggle",
+          get = function()
+            for k, v in pairs(SingularityDB.hiddenSpells) do
+              if k == "Shadowfiend" then
+                return true
+              end
+            end
+            return false
+          end,
+          set = function(i, hiding)
+            if hiding then
+              SingularityDB.hiddenSpells["Shadowfiend"] = ""
+            else
+              SingularityDB.hiddenSpells["Shadowfiend"] = nil
+            end
+            Singularity_updateBars()
+          end,
+        },
         hideWithNoTarget = {
           name = "Hide Singularity with no enemy target",
           type = "toggle",
