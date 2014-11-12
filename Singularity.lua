@@ -36,10 +36,10 @@ local defaults = {
     },
     icon = {
       coords = {
-        l = 0.15,
-        r = 0.85,
-        t = 0.15,
-        b = 0.85,
+        l = 0.30,
+        r = 0.70,
+        t = 0.30,
+        b = 0.70,
       },
       height = 17,
       width = 17,
@@ -183,13 +183,13 @@ local defaults = {
 local function desaturate(texture, desaturating)
   local shaderSupported = texture:SetDesaturated(desaturating)
 
-  if not shaderSupported then
+  -- if not shaderSupported then
     if desaturating then
-      texture:SetVertexColor(0.5, 0.5, 0.5)
+      texture:SetVertexColor(0.3, 0.3, 0.3)
     else
       texture:SetVertexColor(1, 1, 1)
     end
-  end
+  -- end
 end
 
 local function isInList(item, list)
@@ -366,7 +366,7 @@ function Singularity_reloadBars()
 
   local cfg = SingularityDB.bar
   targetBarContainer:SetHeight((cfg.height + cfg.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
-  gcdBar:SetSize(cfg.width - cfg.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 3)
+  gcdBar:SetSize(cfg.width - cfg.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 2)
   gcdBar.texture:SetHeight(gcdBar:GetHeight())
 end
 
