@@ -515,31 +515,15 @@ local function init()
     end
   end
 
-  local function setupBar(spellName, spellID) -- Should only do things that Singularity_updateBars() doesn't
+  local function setupBar(spellName, spellID)
     targetBars[spellName] = CreateFrame("Frame", "Singularity_Bar_" .. spellName, targetBarContainer)
     local b = targetBars[spellName]
-    b.spellID = spellID
-    local cfg
+    local cfg = SingularityDB.bar.icon
     b.iconTexture = b:CreateTexture()
-    cfg = SingularityDB.bar.icon
     b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
-    b.iconTexture:SetSize(cfg.width, cfg.height)
-    cfg = cfg.coords
-    b.iconTexture:SetTexCoord(cfg.l, cfg.r, cfg.t, cfg.b)
-    b.iconTexture:SetTexture(select(3, GetSpellInfo(b.spellID)))
-    cfg = SingularityDB.bar.backdrop
-    b:SetBackdrop(cfg)
-    cfg = cfg.color
-    b:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
-    cfg = SingularityDB.bar.backdrop.borderColor
-    b:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
-    cfg = SingularityDB.bar
-    b:SetSize(cfg.width, cfg.height)
+    b.iconTexture:SetTexture(select(3, GetSpellInfo(spellID)))
     b.stackText = b:CreateFontString()
-    cfg = cfg.text
-    b.stackText:SetFont(cfg.fontPath, cfg.fontSize, cfg.fontFlags)
-
-    Singularity_updateFonts()
+    -- Singularity_updateFonts()
     b.texture = b:CreateTexture()
     b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
 
@@ -591,6 +575,10 @@ local function init()
   gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
 
   Singularity_updateBars()
+  Singularity_updateFonts()
+  Singularity_updateSurgeText()
+  Singularity_updateSpikeText()
+  Singularity_updateOrbsText()
 
   if SingularityDB.hideWithNoTarget then
     targetBarContainer:Hide()
