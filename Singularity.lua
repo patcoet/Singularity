@@ -208,6 +208,10 @@ local function shouldShowBar(spellName)
     return false
   end
 
+  if spellName == "Shadowfiend" and shouldShowBar("Mindbender") then
+    return false
+  end
+
   for row = 1, 7 do
     for column = 1, 3 do
       local _, name, _, enabled = GetTalentInfo(row, column, GetActiveSpecGroup())
@@ -384,6 +388,23 @@ function Singularity_updateFonts()
   end
 end
 
+function Singularity_updateOrbsText()
+  local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
+  if not SingularityDB.alwaysShowOrbsText then
+    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
+  end
+
+  local text = targetBars["Mind Blast"].stackText
+
+  if orbs ~= "" and orbs >= 3 then
+    text:SetTextColor(0, 1, 0, 1)
+  else
+    text:SetTextColor(1, 1, 1, 1)
+  end
+
+  text:SetText(orbs)
+end
+
 function Singularity_updateSpikeText()
   local glyphIsInUse = false
   for i = 1, 6 do
@@ -404,23 +425,6 @@ function Singularity_updateSpikeText()
   for _, spellName in ipairs(SingularityDB.channeledSpells) do
     targetBars[spellName].stackText:SetText(text)
   end
-end
-
-function Singularity_updateOrbsText()
-  local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
-  if not SingularityDB.alwaysShowOrbsText then
-    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
-  end
-
-  local text = targetBars["Mind Blast"].stackText
-
-  if orbs ~= "" and orbs >= 3 then
-    text:SetTextColor(0, 1, 0, 1)
-  else
-    text:SetTextColor(1, 1, 1, 1)
-  end
-
-  text:SetText(orbs)
 end
 
 function Singularity_updateSurgeText()
@@ -505,9 +509,9 @@ local function init()
     SingularityDB = SingularityDB or {}
 
     for k,v in pairs(defaults) do
-      if type(SingularityDB[k]) == "nil" then
+      -- if type(SingularityDB[k]) == "nil" then
         SingularityDB[k] = v
-      end
+      -- end
     end
   end
 
