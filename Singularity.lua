@@ -137,6 +137,7 @@ local defaults = {
     "Cascade",
     "Halo",
     "Mindbender",
+    "Shadowfiend",
   },
   baseDurations = {
     ["Shadow Word: Pain"] = 18,
@@ -159,6 +160,7 @@ local defaults = {
     ["Cascade"] = 127632,
     ["Halo"] = 120644,
     ["Mindbender"] = 123040,
+    ["Shadowfiend"] = 34433,
   },
   debuffs = {
     ["Mind Flay"] = 15407,
@@ -306,7 +308,7 @@ end
 
 
 -- Global functions (called from SingularityConfig)
-function Singularity_reloadBars()
+function Singularity_updateBars()
   local cfg
   for spellName, frame in pairs(targetBars) do
     cfg = SingularityDB.bar
@@ -509,7 +511,7 @@ local function init()
     end
   end
 
-  local function setupBar(spellName, spellID) -- Should only do things that Singularity_reloadBars() doesn't
+  local function setupBar(spellName, spellID) -- Should only do things that Singularity_updateBars() doesn't
     targetBars[spellName] = CreateFrame("Frame", "Singularity_Bar_" .. spellName, targetBarContainer)
     local b = targetBars[spellName]
     b.spellID = spellID
@@ -584,7 +586,7 @@ local function init()
   gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0) -- Note: Depends on there being a Mind Flay bar
   gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
 
-  Singularity_reloadBars()
+  Singularity_updateBars()
 
   if SingularityDB.hideWithNoTarget then
     targetBarContainer:Hide()
@@ -631,7 +633,7 @@ local function processEvents(self, event, ...)
   if event == "PLAYER_TALENT_UPDATE" then
     Singularity_updateSpikeText()
     Singularity_updateSurgeText()
-    Singularity_reloadBars()
+    Singularity_updateBars()
     return
   end
 
@@ -643,7 +645,7 @@ local function processEvents(self, event, ...)
   end
 
   if event == "PLAYER_TALENT_UPDATE" then -- Make sure the right bars are shown
-    Singularity_reloadBars()
+    Singularity_updateBars()
     return
   end
 
@@ -778,7 +780,7 @@ local function processEvents(self, event, ...)
         readDebuffList()
       end
 
-      Singularity_reloadBars()
+      Singularity_updateBars()
       return
     end
   end

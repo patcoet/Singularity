@@ -117,7 +117,7 @@ local options = {
               get = function() return getHandle("background", SingularityDB.targetContainer.backdrop.bgFile) end,
               set = function(i, key)
                 SingularityDB.targetContainer.backdrop.bgFile = sm:Fetch("background", key)
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerBackdropColor = {
@@ -135,7 +135,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerBorderColor = {
@@ -153,7 +153,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerEdgeTexture = {
@@ -165,7 +165,7 @@ local options = {
               get = function() return getHandle("border", SingularityDB.targetContainer.backdrop.edgeFile) end,
               set = function(i, key)
                 SingularityDB.targetContainer.backdrop.edgeFile = sm:Fetch("border", key)
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerEdgeSize = {
@@ -180,7 +180,7 @@ local options = {
               get = function() return SingularityDB.targetContainer.backdrop.edgeSize end,
               set = function(i, value)
                 SingularityDB.targetContainer.backdrop.edgeSize = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerShouldTile = {
@@ -191,7 +191,7 @@ local options = {
               set = function()
                 local cfg = SingularityDB.targetContainer.backdrop
                 cfg.tile = not cfg.tile
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerTileSize = {
@@ -201,7 +201,7 @@ local options = {
               get = function() return tostring(SingularityDB.targetContainer.backdrop.tileSize) end,
               set = function(i, value)
                 SingularityDB.targetContainer.backdrop.tileSize = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerInsetGroup = {
@@ -217,7 +217,7 @@ local options = {
                   get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.left) end,
                   set = function(i, value)
                     SingularityDB.targetContainer.backdrop.insets.left = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barContainerInsetRight = {
@@ -227,7 +227,7 @@ local options = {
                   get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.right) end,
                   set = function(i, value)
                     SingularityDB.targetContainer.backdrop.insets.right = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barContainerInsetTop = {
@@ -237,7 +237,7 @@ local options = {
                   get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.top) end,
                   set = function(i, value)
                     SingularityDB.targetContainer.backdrop.insets.top = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barContainerInsetBottom = {
@@ -247,7 +247,7 @@ local options = {
                   get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.bottom) end,
                   set = function(i, value)
                     SingularityDB.targetContainer.backdrop.insets.bottom = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
               },
@@ -266,7 +266,7 @@ local options = {
               get = function() return SingularityDB.targetContainer.parentFrame end,
               set = function(i, value)
                 SingularityDB.targetContainer.parentFrame = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerAnchorFrom = {
@@ -276,7 +276,7 @@ local options = {
               get = function() return SingularityDB.targetContainer.anchorFrom end,
               set = function(i, key)
                 SingularityDB.targetContainer.anchorFrom = key
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerAnchorFrame = {
@@ -286,7 +286,7 @@ local options = {
               get = function() return SingularityDB.targetContainer.anchorFrame end,
               set = function(i, value)
                 SingularityDB.targetContainer.anchorFrame = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerAnchorTo = {
@@ -296,7 +296,7 @@ local options = {
               get = function() return SingularityDB.targetContainer.anchorTo end,
               set = function(i, key)
                 SingularityDB.targetContainer.anchorTo = key
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerXOffset = {
@@ -305,7 +305,7 @@ local options = {
               get = function() return tostring(SingularityDB.targetContainer.xOffset) end,
               set = function(i, value)
                 SingularityDB.targetContainer.xOffset = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barContainerYOffset = {
@@ -314,7 +314,7 @@ local options = {
               get = function() return tostring(SingularityDB.targetContainer.yOffset) end,
               set = function(i, value)
                 SingularityDB.targetContainer.yOffset = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
           },
@@ -333,7 +333,7 @@ local options = {
           get = function() return tostring(SingularityDB.bar.height) end,
           set = function(i, value)
             SingularityDB.bar.height = value
-            Singularity_reloadBars()
+            Singularity_updateBars()
           end,
         },
         barSpacing = {
@@ -343,7 +343,7 @@ local options = {
           get = function() return tostring(SingularityDB.bar.spacing) end,
           set = function(i, value)
             SingularityDB.bar.spacing = value
-            Singularity_reloadBars()
+            Singularity_updateBars()
           end,
         },
         barContainerSpacing = {
@@ -353,7 +353,7 @@ local options = {
           get = function() return tostring(SingularityDB.targetContainer.spacing) end,
           set = function(i, value)
             SingularityDB.targetContainer.spacing = value
-            Singularity_reloadBars()
+            Singularity_updateBars()
           end,
         },
         barWidth = {
@@ -363,7 +363,7 @@ local options = {
           get = function() return tostring(SingularityDB.bar.width) end,
           set = function(i, value)
             SingularityDB.bar.width = value
-            Singularity_reloadBars()
+            Singularity_updateBars()
           end,
         },
         barTextureInset = {
@@ -373,7 +373,7 @@ local options = {
           get = function() return tostring(SingularityDB.bar.texture.inset) end,
           set = function(i, value)
             SingularityDB.bar.texture.inset = value
-            Singularity_reloadBars()
+            Singularity_updateBars()
           end,
         },
         barColorsGroup = {
@@ -397,7 +397,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barTextureNormalColor = {
@@ -414,7 +414,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barTextureAlertColor = {
@@ -432,7 +432,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
           },
@@ -451,7 +451,7 @@ local options = {
               get = function() return getHandle("background", SingularityDB.bar.backdrop.bgFile) end,
               set = function(i, key)
                 SingularityDB.bar.backdrop.bgFile = sm:Fetch("background", key)
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barBackdropColor = {
@@ -469,7 +469,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barBorderColor = {
@@ -487,7 +487,7 @@ local options = {
                 cfg.g = g
                 cfg.b = b
                 cfg.a = a
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barEdgeTexture = {
@@ -499,7 +499,7 @@ local options = {
               get = function() return getHandle("border", SingularityDB.bar.backdrop.edgeFile) end,
               set = function(i, key)
                 SingularityDB.bar.backdrop.edgeFile = sm:Fetch("border", key)
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barEdgeSize = {
@@ -514,7 +514,7 @@ local options = {
               get = function() return SingularityDB.bar.backdrop.edgeSize end,
               set = function(i, value)
                 SingularityDB.bar.backdrop.edgeSize = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barShouldTile = {
@@ -525,7 +525,7 @@ local options = {
               set = function()
                 local cfg = SingularityDB.bar.backdrop
                 cfg.tile = not cfg.tile
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barTileSize = {
@@ -535,7 +535,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.backdrop.tileSize) end,
               set = function(i, value)
                 SingularityDB.bar.backdrop.tileSize = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             barInsetGroup = {
@@ -550,7 +550,7 @@ local options = {
                   get = function() return tostring(SingularityDB.bar.backdrop.insets.left) end,
                   set = function(i, value)
                     SingularityDB.bar.backdrop.insets.left = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barInsetRight = {
@@ -560,7 +560,7 @@ local options = {
                   get = function() return tostring(SingularityDB.bar.backdrop.insets.right) end,
                   set = function(i, value)
                     SingularityDB.bar.backdrop.insets.right = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barInsetTop = {
@@ -570,7 +570,7 @@ local options = {
                   get = function() return tostring(SingularityDB.bar.backdrop.insets.top) end,
                   set = function(i, value)
                     SingularityDB.bar.backdrop.insets.top = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
                 barInsetBottom = {
@@ -580,7 +580,7 @@ local options = {
                   get = function() return tostring(SingularityDB.bar.backdrop.insets.bottom) end,
                   set = function(i, value)
                     SingularityDB.bar.backdrop.insets.bottom = value
-                    Singularity_reloadBars()
+                    Singularity_updateBars()
                   end,
                 },
               },
@@ -701,7 +701,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.xOffset) end,
               set = function(i, value)
                 SingularityDB.bar.icon.xOffset = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             iconHeight = {
@@ -710,7 +710,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.height) end,
               set = function(i, value)
                 SingularityDB.bar.icon.height = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
             iconWidth = {
@@ -719,7 +719,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.width) end,
               set = function(i, value)
                 SingularityDB.bar.icon.width = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
               end,
             },
           },
@@ -736,7 +736,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.coords.l) end,
               set = function(i, value)
                 SingularityDB.bar.icon.coords.l = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
                 end,
             },
             iconCoordRight = {
@@ -745,7 +745,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.coords.r) end,
               set = function(i, value)
                 SingularityDB.bar.icon.coords.r = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
                 end,
             },
             iconCoordTop = {
@@ -754,7 +754,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.coords.t) end,
               set = function(i, value)
                 SingularityDB.bar.icon.coords.t = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
                 end,
             },
             iconCoordBottom = {
@@ -763,7 +763,7 @@ local options = {
               get = function() return tostring(SingularityDB.bar.icon.coords.b) end,
               set = function(i, value)
                 SingularityDB.bar.icon.coords.b = value
-                Singularity_reloadBars()
+                Singularity_updateBars()
                 end,
             },
           },
