@@ -509,9 +509,9 @@ local function init()
     SingularityDB = SingularityDB or {}
 
     for k,v in pairs(defaults) do
-      -- if type(SingularityDB[k]) == "nil" then
+      if type(SingularityDB[k]) == "nil" then
         SingularityDB[k] = v
-      -- end
+      end
     end
   end
 
@@ -523,7 +523,6 @@ local function init()
     b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
     b.iconTexture:SetTexture(select(3, GetSpellInfo(spellID)))
     b.stackText = b:CreateFontString()
-    -- Singularity_updateFonts()
     b.texture = b:CreateTexture()
     b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
 
@@ -551,8 +550,6 @@ local function init()
 
   gcdBar = CreateFrame("Frame", "Singularity_Bar_GCD", targetBarContainer)
   gcdBar.texture = gcdBar:CreateTexture()
-
-  -- showTargetBars()
 
   if targetBars["Mind Sear"] ~= nil then
     targetBars["Mind Sear"]:SetAlpha(0)
