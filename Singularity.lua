@@ -337,7 +337,10 @@ function Singularity_reloadBars()
   targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.width + -cfg.xOffset + 2)
 
   cfg = SingularityDB.targetContainer
-  targetBarContainer:SetParent(cfg.parentFrame)
+  targetBarContainer:SetScript("OnUpdate", function() -- Wait for a frame to be drawn before setting parent, so that we don't try to do it before other addons have created their initial frames
+    targetBarContainer:SetParent(cfg.parentFrame)
+    targetBarContainer:SetScript("OnUpdate", nil)
+  end)
 
   targetBarContainer:ClearAllPoints()
   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
