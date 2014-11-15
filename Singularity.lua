@@ -1,6 +1,4 @@
 -- TODO: Low-level support
--- TODO:
--- TODO: Make sure vehicle stuff works
 if UnitClass("player") ~= "Priest" then
   DisableAddOn("Singularity")
   return
@@ -651,7 +649,7 @@ local function processEvents(self, event, ...)
       targetBars[spellName].active = false
     end
 
-    if not UnitExists("target") or not UnitCanAttack("player", "target") then
+    if not UnitExists("target") or not UnitCanAttack("player", "target") or UnitInVehicle("player") or UnitControllingVehicle("player") or UnitHasVehicleUI("player") then
       -- f:SetScript("OnUpdate", nil)
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
       targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
