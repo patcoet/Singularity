@@ -1,5 +1,5 @@
 -- TODO: Low-level support
--- TODO: Fix SWD
+-- TODO:
 -- TODO: Make sure vehicle stuff works
 if UnitClass("player") ~= "Priest" then
   DisableAddOn("Singularity")
@@ -592,6 +592,8 @@ local function init()
   f:RegisterEvent("UNIT_EXITED_VEHICLE")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:UnregisterEvent("ADDON_LOADED")
+
+  f:SetScript("OnUpdate", onUpdate)
 end
 
 local function processEvents(self, event, ...)
@@ -650,7 +652,8 @@ local function processEvents(self, event, ...)
     end
 
     if not UnitExists("target") or not UnitCanAttack("player", "target") then
-      f:SetScript("OnUpdate", nil)
+      -- f:SetScript("OnUpdate", nil)
+      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
       targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Divine Star"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Halo"].stackText:SetTextColor(0, 0, 0, 0)
@@ -661,7 +664,7 @@ local function processEvents(self, event, ...)
     end
 
     if UnitExists("target") then
-      f:SetScript("OnUpdate", onUpdate)
+      -- f:SetScript("OnUpdate", onUpdate)
 
       local _, currSpec = GetSpecializationInfo(GetSpecialization())
 
