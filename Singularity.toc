@@ -1,7 +1,7 @@
 ## Interface: 60000
 ## Title: Singularity
 ## Notes: Shadow Priest DoT timer
-## Version: 60000.2
+## Version: 60000.3
 ## SavedVariables: SingularityDB
 LibStub.lua
 CallbackHandler-1.0.lua
