@@ -1,4 +1,6 @@
 -- TODO: Low-level support
+-- TODO: Fix SWD
+-- TODO: Make sure vehicle stuff works
 if UnitClass("player") ~= "Priest" then
   DisableAddOn("Singularity")
   return
@@ -708,11 +710,6 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PET_BATTLE_OPENING_START" then
-    targetBarContainer:Hide()
-    return
-  end
-
   if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends, update cooldown bars
     for spellName, spellID in pairs(SingularityDB.cooldowns) do
       local startTime, duration = GetSpellCooldown(spellID)
@@ -762,6 +759,10 @@ local function processEvents(self, event, ...)
         local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
         updateDebuffList(targetGUID, spellName, expires)
         readDebuffList()
+      end
+
+      if type == "SPELL_AURA_REMOVED" and targetBars[spellName] then
+        targetBars[spellName].active = false
       end
 
       Singularity_updateBars()
