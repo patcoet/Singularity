@@ -649,7 +649,8 @@ local function processEvents(self, event, ...)
       targetBars[spellName].active = false
     end
 
-    if not UnitExists("target") or not UnitCanAttack("player", "target") or UnitInVehicle("player") or UnitControllingVehicle("player") or UnitHasVehicleUI("player") then
+    -- if not UnitExists("target") or UnitIsFriend("player", "target") or UnitInVehicle("player") or UnitControllingVehicle("player") or UnitHasVehicleUI("player") then
+    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then
       -- f:SetScript("OnUpdate", nil)
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
       targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
