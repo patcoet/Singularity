@@ -588,6 +588,7 @@ local function init()
   f:RegisterEvent("PLAYER_TARGET_CHANGED")
   f:RegisterEvent("UNIT_ENTERING_VEHICLE")
   f:RegisterEvent("UNIT_EXITED_VEHICLE")
+  f:RegisterEvent("UNIT_FACTION")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:UnregisterEvent("ADDON_LOADED")
 
@@ -644,7 +645,7 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PLAYER_TARGET_CHANGED" then -- When the player changes targets, clear the current debuff timers and replace them with the debuff timers for the new target
+  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" then -- When the player changes targets, clear the current debuff timers and replace them with the debuff timers for the new target
     for spellName, _ in pairs(SingularityDB.debuffs) do
       targetBars[spellName].active = false
     end
