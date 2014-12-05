@@ -589,6 +589,7 @@ local function init()
   f:RegisterEvent("UNIT_ENTERING_VEHICLE")
   f:RegisterEvent("UNIT_EXITED_VEHICLE")
   f:RegisterEvent("UNIT_FACTION")
+  f:RegisterEvent("UNIT_FLAGS")
   f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
   f:UnregisterEvent("ADDON_LOADED")
 
@@ -645,12 +646,11 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" then -- When the player changes targets, clear the current debuff timers and replace them with the debuff timers for the new target
+  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then -- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
     for spellName, _ in pairs(SingularityDB.debuffs) do
       targetBars[spellName].active = false
     end
 
-    -- if not UnitExists("target") or UnitIsFriend("player", "target") or UnitInVehicle("player") or UnitControllingVehicle("player") or UnitHasVehicleUI("player") then
     if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then
       -- f:SetScript("OnUpdate", nil)
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
