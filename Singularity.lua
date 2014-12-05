@@ -470,9 +470,9 @@ local function onUpdate(self, elapsed)
   if shouldShowBar("Cascade") then
     targetBars["Cascade"].stackText:SetText(maxRange)
     local t = targetBars["Cascade"].stackText
-    if maxRange < 40 then
+    if maxRange <= 30 then
       t:SetTextColor(1, 1, 0, 1)
-    elseif maxRange == 40 then
+    elseif maxRange <= 40 then
       t:SetTextColor(0, 1, 0, 1)
     else
       t:SetTextColor(1, 0, 0, 1)
@@ -771,6 +771,7 @@ local function processEvents(self, event, ...)
     end
   end
 end
+
 
 f = CreateFrame("Frame")
 f.dt = 0
