@@ -343,13 +343,31 @@ function Singularity_updateBars()
   targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.width + -cfg.xOffset + 2)
 
   cfg = SingularityDB.targetContainer
-  targetBarContainer:SetScript("OnUpdate", function() -- Wait for a frame to be drawn before setting parent, so that we don't try to do it before other addons have created their initial frames
+  if _G[cfg.parentFrame] == nil then
+    local f = CreateFrame("Frame")
+    f:SetScript("OnUpdate", function()
+      if _G[cfg.parentFrame] ~= nil then
+        targetBarContainer:SetParent(cfg.parentFrame)
+        f:SetScript("OnUpdate", nil)
+      end
+    end)
+  else
     targetBarContainer:SetParent(cfg.parentFrame)
-    targetBarContainer:SetScript("OnUpdate", nil)
-  end)
+  end
 
   targetBarContainer:ClearAllPoints()
-  targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+
+  if _G[cfg.anchorFrame] == nil then
+    local f = CreateFrame("Frame")
+    f:SetScript("OnUpdate", function()
+      if _G[cfg.anchorFrame] ~= nil then
+        targetBarContainer:SetPoint(cfg.anchorFrom, "PitBull4_Frames_target", cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+        f:SetScript("OnUpdate", nil)
+      end
+    end)
+  else
+    targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  end
 
   for spellName, frame in pairs(targetBars) do
     if shouldShowBar(spellName) then
@@ -559,7 +577,19 @@ local function init()
   end
 
   local cfg = SingularityDB.targetContainer
-  targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+
+  -- if cfg.anchorFrame.GetName == nil then
+  --   targetBarContainer:SetPoint(cfg.anchorFrom, UIParent, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  --   targetBarContainer:SetScript("OnUpdate", function()
+  --     if cfg.anchorFrame.GetName ~= nil then
+  --       targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  --       targetBarContainer:SetScript("OnUpdate", nil)
+  --     end
+  --   end)
+  -- else
+  --   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+  -- end
+
   targetBarContainer:SetBackdrop(cfg.backdrop)
   cfg = cfg.backdrop.borderColor
   targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)

@@ -81,6 +81,46 @@ local options = {
             Singularity_updateBars()
           end,
         },
+        hideSWP = {
+          name = "Hide Shadow Word: Pain bar",
+          type = "toggle",
+          get = function()
+            for k, v in pairs(SingularityDB.hiddenSpells) do
+              if k == "Shadow Word: Pain" then
+                return true
+              end
+            end
+            return false
+          end,
+          set = function(i, hiding)
+            if hiding then
+              SingularityDB.hiddenSpells["Shadow Word: Pain"] = ""
+            else
+              SingularityDB.hiddenSpells["Shadow Word: Pain"] = nil
+            end
+            Singularity_updateBars()
+          end,
+        },
+        hideVT = {
+          name = "Hide Vampiric Touch bar",
+          type = "toggle",
+          get = function()
+            for k, v in pairs(SingularityDB.hiddenSpells) do
+              if k == "Vampiric Touch" then
+                return true
+              end
+            end
+            return false
+          end,
+          set = function(i, hiding)
+            if hiding then
+              SingularityDB.hiddenSpells["Vampiric Touch"] = ""
+            else
+              SingularityDB.hiddenSpells["Vampiric Touch"] = nil
+            end
+            Singularity_updateBars()
+          end,
+        },
         hideWithNoTarget = {
           name = "Hide Singularity with no enemy target",
           type = "toggle",
