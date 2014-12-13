@@ -84,6 +84,7 @@ local options = {
         hideSWP = {
           name = "Hide Shadow Word: Pain bar",
           type = "toggle",
+          width = "double",
           get = function()
             for k, v in pairs(SingularityDB.hiddenSpells) do
               if k == "Shadow Word: Pain" then
