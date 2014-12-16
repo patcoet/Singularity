@@ -5,8 +5,7 @@ if UnitClass("player") ~= "Priest" then
 end
 
 
-
-local gcdBar, f, rc, targetBarContainer, targetBars
+local debugging, gcdBar, f, rc, targetBarContainer, targetBars
 local defaults = {
   bar = {
     backdrop = {
@@ -607,7 +606,7 @@ local function init()
   Singularity_updateSpikeText()
   Singularity_updateOrbsText()
 
-  if SingularityDB.hideWithNoTarget then
+  if SingularityDB.hideWithNoTarget then if debugging then print(610) end
     targetBarContainer:Hide()
   end
 
@@ -676,24 +675,24 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then -- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
+  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then if debugging then print(679) end-- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
     for spellName, _ in pairs(SingularityDB.debuffs) do
       targetBars[spellName].active = false
     end
 
-    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then
+    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then if debugging then print(684) end
       -- f:SetScript("OnUpdate", nil)
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
       targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Divine Star"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Halo"].stackText:SetTextColor(0, 0, 0, 0)
-      if SingularityDB.hideWithNoTarget then
+      if SingularityDB.hideWithNoTarget then if debugging then print(690) end
         targetBarContainer:Hide()
       end
       return
     end
 
-    if UnitExists("target") then
+    if UnitExists("target") then if debugging then print(696) end
       -- f:SetScript("OnUpdate", onUpdate)
 
       local _, currSpec = GetSpecializationInfo(GetSpecialization())
@@ -733,12 +732,12 @@ local function processEvents(self, event, ...)
     end
   end
 
-  if event == "UNIT_ENTERING_VEHICLE" then
+  if event == "UNIT_ENTERING_VEHICLE" and ... == "player" then if debugging then print(736) end
     targetBarContainer:Hide()
     return
   end
 
-  if event == "UNIT_EXITED_VEHICLE" and not SingularityDB.hideWithNoTarget then
+  if event == "UNIT_EXITED_VEHICLE" and ... == "player" and not SingularityDB.hideWithNoTarget then
     targetBarContainer:Show()
     return
   end
