@@ -360,7 +360,7 @@ function Singularity_updateBars()
     local f = CreateFrame("Frame")
     f:SetScript("OnUpdate", function()
       if _G[cfg.anchorFrame] ~= nil then
-        targetBarContainer:SetPoint(cfg.anchorFrom, "PitBull4_Frames_target", cfg.anchorTo, cfg.xOffset, cfg.yOffset)
+        targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
         f:SetScript("OnUpdate", nil)
       end
     end)
@@ -376,7 +376,7 @@ function Singularity_updateBars()
     end
   end
 
-  local numBars = 1
+  local numBars = SingularityDB.hiddenSpells["Mind Flay"] and 0 or 1
   for _, spellName in ipairs(SingularityDB.barDisplayOrder) do
     if targetBars[spellName] ~= nil then
       if targetBars[spellName]:IsShown() then
@@ -429,9 +429,6 @@ function Singularity_updateSpikeText()
       glyphIsInUse = true
     end
   end
-  -- if not glyphIsInUse then
-  --   return
-  -- end
 
   local text = select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0
 

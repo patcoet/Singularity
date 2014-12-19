@@ -35,6 +35,7 @@ local options = {
           name = "Display Shadow Orbs stacks at 0",
           type = "toggle",
           width = "double",
+          order = 1,
           get = function() return SingularityDB.alwaysShowOrbsText end,
           set = function()
             SingularityDB.alwaysShowOrbsText = not SingularityDB.alwaysShowOrbsText
@@ -45,6 +46,7 @@ local options = {
           name = "Display Glyph of Mind Spike stacks at 0",
           type = "toggle",
           width = "double",
+          order = 1,
           get = function() return SingularityDB.alwaysShowSpikeText end,
           set = function()
             SingularityDB.alwaysShowSpikeText = not SingularityDB.alwaysShowSpikeText
@@ -55,6 +57,7 @@ local options = {
           name = "Display Surge of Darkness stacks at 0",
           type = "toggle",
           width = "double",
+          order = 1,
           get = function() return SingularityDB.alwaysShowSurgeText end,
           set = function()
             SingularityDB.alwaysShowSurgeText = not SingularityDB.alwaysShowSurgeText
@@ -105,6 +108,7 @@ local options = {
         hideVT = {
           name = "Hide Vampiric Touch bar",
           type = "toggle",
+          width = "double",
           get = function()
             for k, v in pairs(SingularityDB.hiddenSpells) do
               if k == "Vampiric Touch" then
@@ -122,10 +126,36 @@ local options = {
             Singularity_updateBars()
           end,
         },
+        hideMF = {
+          name = "Hide Mind Flay bar",
+          type = "toggle",
+          width = "double",
+          get = function()
+            for k, v in pairs(SingularityDB.hiddenSpells) do
+              if k == "Mind Flay" then
+                return true
+              end
+            end
+            return false
+          end,
+          set = function(i, hiding)
+            if hiding then
+              SingularityDB.hiddenSpells["Mind Flay"] = ""
+              SingularityDB.hiddenSpells["Mind Sear"] = ""
+              SingularityDB.hiddenSpells["Insanity"] = ""
+            else
+              SingularityDB.hiddenSpells["Mind Flay"] = nil
+              SingularityDB.hiddenSpells["Mind Sear"] = ""
+              SingularityDB.hiddenSpells["Insanity"] = ""
+            end
+            Singularity_updateBars()
+          end,
+        },
         hideWithNoTarget = {
           name = "Hide Singularity with no enemy target",
           type = "toggle",
           width = "double",
+          order = 1,
           get = function() return SingularityDB.hideWithNoTarget end,
           set = function()
             SingularityDB.hideWithNoTarget = not SingularityDB.hideWithNoTarget
@@ -141,6 +171,7 @@ local options = {
           desc = "(Seconds)",
           type = "range",
           width = "double",
+          order = -1,
           min = 1,
           max = 30,
           softMin = 4,
@@ -152,6 +183,7 @@ local options = {
           name = "Range display update interval (seconds)",
           type = "input",
           width = "double",
+          order = -1,
           get = function() return tostring(SingularityDB.updateInterval) end,
           set = function(i, value)
             SingularityDB.updateInterval = value + 0
