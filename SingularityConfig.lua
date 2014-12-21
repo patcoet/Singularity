@@ -145,8 +145,8 @@ local options = {
               SingularityDB.hiddenSpells["Insanity"] = ""
             else
               SingularityDB.hiddenSpells["Mind Flay"] = nil
-              SingularityDB.hiddenSpells["Mind Sear"] = ""
-              SingularityDB.hiddenSpells["Insanity"] = ""
+              SingularityDB.hiddenSpells["Mind Sear"] = nil
+              SingularityDB.hiddenSpells["Insanity"] = nil
             end
             Singularity_updateBars()
           end,
