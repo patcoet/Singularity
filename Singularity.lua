@@ -574,18 +574,6 @@ local function init()
 
   local cfg = SingularityDB.targetContainer
 
-  -- if cfg.anchorFrame.GetName == nil then
-  --   targetBarContainer:SetPoint(cfg.anchorFrom, UIParent, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  --   targetBarContainer:SetScript("OnUpdate", function()
-  --     if cfg.anchorFrame.GetName ~= nil then
-  --       targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  --       targetBarContainer:SetScript("OnUpdate", nil)
-  --     end
-  --   end)
-  -- else
-  --   targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  -- end
-
   targetBarContainer:SetBackdrop(cfg.backdrop)
   cfg = cfg.backdrop.borderColor
   targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
@@ -790,7 +778,7 @@ local function processEvents(self, event, ...)
         readDebuffList()
       end
 
-      if type == "SPELL_AURA_REMOVED" and targetBars[spellName] then
+      if type == "SPELL_AURA_REMOVED" and targetGUID == UnitGUID("target") and targetBars[spellName] then
         targetBars[spellName].active = false
       end
 
