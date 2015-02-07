@@ -5,7 +5,7 @@ if UnitClass("player") ~= "Priest" then
 end
 
 
-local debugging, gcdBar, f, rc, targetBarContainer, targetBars
+local gcdBar, f, rc, targetBarContainer, targetBars
 local defaults = {
   bar = {
     backdrop = {
@@ -394,6 +394,10 @@ function Singularity_updateBars()
   targetBarContainer:SetHeight((cfg.height + cfg.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
   gcdBar:SetSize(cfg.width - cfg.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 2)
   gcdBar.texture:SetHeight(gcdBar:GetHeight())
+
+  if not shouldShowBar("Insanity") then
+    targetBars["Mind Flay"]:SetAlpha(1)
+  end
 end
 
 function Singularity_updateFonts()
@@ -591,15 +595,17 @@ local function init()
   Singularity_updateSpikeText()
   Singularity_updateOrbsText()
 
-  if SingularityDB.hideWithNoTarget then if debugging then print(610) end
+  if SingularityDB.hideWithNoTarget then
     targetBarContainer:Hide()
   end
 
   f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
   f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
   f:RegisterEvent("PET_BATTLE_OPENING_START")
+  f:RegisterEvent("PLAYER_DEAD")
   f:RegisterEvent("PLAYER_TALENT_UPDATE")
   f:RegisterEvent("PLAYER_TARGET_CHANGED")
+  f:RegisterEvent("UNIT_AURA")
   f:RegisterEvent("UNIT_ENTERING_VEHICLE")
   f:RegisterEvent("UNIT_EXITED_VEHICLE")
   f:RegisterEvent("UNIT_FACTION")
@@ -613,6 +619,18 @@ end
 local function processEvents(self, event, ...)
   if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then -- Create frames, load options, etc.
     init()
+    return
+  end
+
+  if event == "PLAYER_DEAD" then
+    Singularity_updateSurgeText()
+    Singularity_updateOrbsText()
+    Singularity_updateSurgeText()
+    return
+  end
+
+  if event == "UNIT_AURA" and select(1, ...) == "player" then
+    Singularity_updateSurgeText()
     return
   end
 
@@ -660,24 +678,24 @@ local function processEvents(self, event, ...)
     return
   end
 
-  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then if debugging then print(679) end-- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
+  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then -- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
     for spellName, _ in pairs(SingularityDB.debuffs) do
       targetBars[spellName].active = false
     end
 
-    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then if debugging then print(684) end
+    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then
       -- f:SetScript("OnUpdate", nil)
       desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
       targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Divine Star"].stackText:SetTextColor(0, 0, 0, 0)
       targetBars["Halo"].stackText:SetTextColor(0, 0, 0, 0)
-      if SingularityDB.hideWithNoTarget then if debugging then print(690) end
+      if SingularityDB.hideWithNoTarget then
         targetBarContainer:Hide()
       end
       return
     end
 
-    if UnitExists("target") then if debugging then print(696) end
+    if UnitExists("target") then
       -- f:SetScript("OnUpdate", onUpdate)
 
       local _, currSpec = GetSpecializationInfo(GetSpecialization())
@@ -717,7 +735,7 @@ local function processEvents(self, event, ...)
     end
   end
 
-  if event == "UNIT_ENTERING_VEHICLE" and ... == "player" then if debugging then print(736) end
+  if event == "UNIT_ENTERING_VEHICLE" and ... == "player" then
     targetBarContainer:Hide()
     return
   end
