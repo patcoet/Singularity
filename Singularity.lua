@@ -143,7 +143,7 @@ local defaults = {
     ["Vampiric Touch"] = 15,
   },
   buffs = {
-    ["Shadow Word: Insanity"] = 132573,
+    ["Insanity"] = 132573,
     ["Glyph of Mind Spike"] = 81292,
     ["Surge of Darkness"] = 87160,
   },
@@ -736,7 +736,7 @@ local function processEvents(self, event, ...)
   end
 
   if event == "UNIT_ENTERING_VEHICLE" and ... == "player" then
-    targetBarContainer:Hide()
+    -- targetBarContainer:Hide()
     return
   end
 
