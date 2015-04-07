@@ -1,479 +1,208 @@
--- TODO: Low-level support
-if UnitClass("player") ~= "Priest" then
-  DisableAddOn("Singularity")
-  return
+local function toSet(t)
+  local u = {}
+  for _, v in ipairs(t) do
+    u[v] = true
+  end
+  return u
 end
 
-
-local gcdBar, f, rc, targetBarContainer, targetBars
-local defaults = {
-  bar = {
-    backdrop = {
-      bgFile = "Interface\\Buttons\\WHITE8X8",
-      edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
-      tile = false,
-      tileSize = 32,
-      edgeSize = 1,
-      insets = {
-        left = 1,
-        right = 1,
-        top = 1,
-        bottom = 1,
-      },
-      color = {
-        r = 0,
-        g = 0,
-        b = 0,
-        a = 0,
-      },
-      borderColor = {
-        r = 0,
-        g = 0,
-        b = 0,
-        a = 0,
-      },
+local cfg = {
+  backdrop = {
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
+    tile = false,
+    tileSize = 32,
+    edgeSize = 1,
+    insets = {
+      left = 1,
+      right = 1,
+      top = 1,
+      bottom = 1,
     },
-    icon = {
-      coords = {
-        l = 0.30,
-        r = 0.70,
-        t = 0.30,
-        b = 0.70,
-      },
-      height = 17,
-      width = 17,
-      xOffset = -1,
+    color = {
+      r = 0,
+      g = 0,
+      b = 0,
+      a = 0.5,
     },
-    text = {
-      anchorFrom = "CENTER",
-      anchorTo = "CENTER",
-      fontPath = "Interface\\AddOns\\Singularity\\Marken.ttf",
-      fontSize = 8,
-      fontFlags = "THINOUTLINEMONOCHROME",
-      xOffset = 1,
-      yOffset = 0,
+    borderColor = {
+      r = 0,
+      g = 0,
+      b = 0,
+      a = 1,
     },
-    texture = {
-      alert = {
-        r = 0,
-        g = 0.5,
-        b = 0,
-        a = 1,
-      },
-      color = {
-        r = 0.5,
-        g = 0.5,
-        b = 0.5,
-        a = 1,
-      },
-      path = "Interface\\Buttons\\WHITE8X8",
-      inset = 0,
-    },
-    height = 17,
-    maxTime = 8,
-    spacing = 1,
-    width = 177,
   },
-  targetContainer = {
-    backdrop = {
-      bgFile = "Interface\\Buttons\\WHITE8X8",
-      edgeFile = "Interface\\AddOns\\Singularity\\SolidBorder",
-      tile = false,
-      tileSize = 32,
-      edgeSize = 1,
-      insets = {
-        left = 1,
-        right = 1,
-        top = 1,
-        bottom = 1
-      },
-      color = {
-        r = 0,
-        g = 0,
-        b = 0,
-        a = 0.5,
-      },
-      borderColor = {
-        br = 0,
-        bg = 0,
-        bb = 0,
-        ba = 1,
-      },
-    },
-    anchorFrom = "TOP",
-    anchorFrame = "UIParent",
-    anchorTo = "CENTER",
-    parentFrame = "UIParent",
-    xOffset = 0,
-    yOffset = -162,
-    spacing = 0,
-  },
-  gcdColor = {
-    r = 1,
-    g = 1,
-    b = 1,
-    a = 0.5,
-  },
-  alwaysShowOrbsText = false,
-  alwaysShowSurgeText = false,
-  alwaysShowSpikeText = false,
-  hideWithNoTarget = true,
-  updateInterval = 0.05,
-
-  barDisplayOrder = {
-    "Insanity",
-    "Mind Flay",
-    "Mind Sear",
-    "Devouring Plague",
-    "Shadow Word: Insanity",
-    "Mind Blast",
-    "Shadow Word: Death",
-    "Surge of Darkness",
-    "Shadowy Insight",
-    "Divine Star",
-    "Vampiric Touch",
-    "Shadow Word: Pain",
-    "Cascade",
-    "Halo",
-    "Mindbender",
-    "Shadowfiend",
-  },
-  baseDurations = {
-    ["Shadow Word: Pain"] = 18,
-    ["Vampiric Touch"] = 15,
+  barColor = {1/2, 1/2, 1/2, 1},
+  barGap = 1,
+  barMaxTime = 12,
+  barPoint = {"TOP", "TOP", 0, -1},
+  barRefreshColor = {1, 0, 0, 1},
+  barSize = {200, 20},
+  barTexture = "Interface\\AddOns\\Singularity\\Singularity_flat",
+  baseDuration = {
+    [589] = 18, -- Shadow Word: Pain
+    [34914] = 15, -- Vampiric Touch
+    [155361] = 60, -- Void Entropy
   },
   buffs = {
-    ["Insanity"] = 132573,
-    ["Glyph of Mind Spike"] = 81292,
-    ["Surge of Darkness"] = 87160,
-  },
-  channeledSpells = {
-    "Insanity",
-    "Mind Flay",
-    "Mind Sear",
+    139139, -- Insanity
+    162448, -- Surge of Darkness
   },
   cooldowns = {
-    ["Shadow Word: Death"] = 32379,
-    ["Mind Blast"] = 8092,
-    ["Divine Star"] = 122121,
-    ["Cascade"] = 127632,
-    ["Halo"] = 120644,
-    ["Mindbender"] = 123040,
-    ["Shadowfiend"] = 34433,
+    8092, -- Mind Blast
+    34433, -- Shadowfriend/Mindfriender
+    175702, -- Divine Burst (Cascade/Divine Star/Halo)
+    10060, -- Power Infusion
+    32379, -- Shadow Word: Death
   },
-  debuffs = {
-    ["Mind Flay"] = 15407,
-    ["Insanity"] = 129197,
-    ["Mind Sear"] = 48045,
-    ["Vampiric Touch"] = 34914,
-    ["Shadow Word: Pain"] = 589,
+  DeathBar = 32379, -- Shadow Word: Death
+  dots = {
+    589, -- Shadow Word: Pain
+    34914, -- Vampiric Touch
+    155361, -- Void Entropy
   },
-  hiddenSpells = {
-    ["Glyph of Mind Spike"] = "",
+  dynIconSize = {12, 12},
+  dynBarSize = {200, 12},
+  dynSortOrder = {
+    "target",
+    "mouseover",
+    "focus",
+    "boss1",
+    "boss2",
+    "boss3",
+    "boss4",
+    "boss5",
   },
-  orbSpenders = {
-    ["Devouring Plague"] = "",
-    ["Void Entropy"] = "",
-    ["Psychic Horror"] = "",
+  dynTexCoords = {0.3, 0.7, 0.3, 0.7},
+  dynTextPoint = {"CENTER", "CENTER", 0, 0},
+  dynText2Point = {"RIGHT", "RIGHT", -1, 0},
+  font = {"Interface\\AddOns\\Singularity\\Marken.ttf", 8, "THINOUTLINEMONOCHROME"},
+  fontPoint = {"CENTER", "CENTER", 2, 0},
+  gcdBarColor = {1, 1, 1, 0.5},
+  hiddenBars = {
+    ["cast"] = false,
+    [34433] = true,
   },
+  hideOOC = false,
+  iconPoint = {"RIGHT", "LEFT", -1, 0},
+  iconSize = {20, 20},
+  links = {
+    [123040] = 34433, -- Mindfriender
+    [120644] = 175702, -- Halo
+    [122121] = 175702, -- Divine Star
+    [127632] = 175702, -- Cascade
+  },
+  secondaryResourceBar = 8092, -- Mind Blast
+  rangeTextBar = 175702, -- Divine Burst
+  secondaryResource = SPELL_POWER_SHADOW_ORBS,
+  showDoTBars = true,
+  SingularityPoint = {"TOP", "UIParent", "CENTER", 0, -162},
+  staticParent = "UIParent",
+  staticSortOrder = {
+    "cast",
+    139139, -- Insanity
+    8092, -- Mind Blast
+    32379, -- Shadow Word: Death
+    162448, -- Surge of Darkness
+    175702, -- Divine Burst
+    34433, -- Shadowfriend
+  },
+  texCoords = {0.1, 0.9, 0.1, 0.9},
+  texts = {
+    [162448] = 162448 -- Surge of Darkness text on Surge of Darkness icon
+  },
+  trackedEvents = {
+    "UNIT_AURA", -- buffs
+    "UNIT_SPELLCAST_START", -- casts
+    "UNIT_SPELLCAST_CHANNEL_START", -- casts
+    "UNIT_SPELLCAST_SENT", -- GCD
+    "UNIT_SPELLCAST_STOP", -- casts
+    "UNIT_SPELLCAST_CHANNEL_STOP", -- casts
+    "UNIT_SPELLCAST_INTERRUPTED", -- casts
+    "UNIT_SPELLCAST_SUCCEEDED", -- cooldowns
+    "COMBAT_LOG_EVENT_UNFILTERED", -- DoTs, Orbs
+    "PLAYER_TARGET_CHANGED", -- dynamic reordering
+    "UPDATE_MOUSEOVER_UNIT", -- dynamic reordering
+    "PLAYER_FOCUS_CHANGED", -- dynamic reordering
+    "PLAYER_TALENT_UPDATE", -- texts and settings
+    "GLYPH_ADDED", -- texts and settings
+    "GLYPH_REMOVED", -- texts and settings
+    "GLYPH_UPDATED", -- texts and settings
+    "PLAYER_ENTERING_WORLD", -- texts and settings
+    "PLAYER_DEAD", -- texts
+    "PLAYER_REGEN_ENABLED", -- hide OOC
+    "PLAYER_REGEN_DISABLED", -- hide OOC
+  },
+  unitIDSymbols = {
+    ["target"] = "t",
+    ["mouseover"] = "m",
+    ["focus"] = "f",
+    ["boss1"] = "b1",
+    ["boss2"] = "b2",
+    ["boss3"] = "b3",
+    ["boss4"] = "b4",
+    ["boss5"] = "b5",
+  },
+  secondaryResourceBreakpoint = 3,
+  secondaryResourceAlertColor = {0, 1, 0, 1}
 }
 
+cfg.buffs = toSet(cfg.buffs)
+cfg.dots = toSet(cfg.dots)
+cfg.cooldowns = toSet(cfg.cooldowns)
+local haveMouseover = false
 
-
--- Utility functions
-local function desaturate(texture, desaturating)
-  local shaderSupported = texture:SetDesaturated(desaturating)
-
-  -- if not shaderSupported then
-    if desaturating then
-      texture:SetVertexColor(0.3, 0.3, 0.3)
-    else
-      texture:SetVertexColor(1, 1, 1)
-    end
-  -- end
-end
-
-local function isInList(item, list)
-  for k, v in pairs(list) do
-    if k == item then
-      return true
-    end
-  end
-  return false
-end
-
-local function shouldShowBar(spellName)
-  if isInList(spellName, SingularityDB.hiddenSpells) then
-    return false
-  end
-
-  if spellName == "Shadowfiend" and shouldShowBar("Mindbender") then
-    return false
-  end
-
-  for row = 1, 7 do
-    for column = 1, 3 do
-      local _, name, _, enabled = GetTalentInfo(row, column, GetActiveSpecGroup())
-      if name == spellName:gsub("Shadow Word: ", "") and not enabled then
-        return false
-      end
-    end
-  end
-
-  return true
-end
-
-
-
--- Main functions
-local function runTimer(frame, expires)
-  local name = frame:GetName():sub(17)
-  frame:SetScript("OnUpdate", function()
-    if not frame.active then
-      frame.texture:SetTexture(0, 0, 0, 0)
-      frame:SetScript("OnUpdate", nil)
-    else
-      if name == "Glyph of Mind Spike" or name == "Surge of Darkness" or name == "Shadowy Insight" then
-        expires = select(7, UnitBuff("player", name)) or 0
-      end
-
-      if isInList(name, SingularityDB.cooldowns) then
-        local startTime, cooldown = GetSpellCooldown(name)
-        expires = startTime + cooldown
-      end
-      local timeLeft = expires - GetTime()
-
-      if timeLeft > 0 then
-        local cfg
-        if frame:GetName() == "Singularity_Bar_GCD" then
-          cfg = SingularityDB.gcdColor
-          frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
-        else
-          cfg = SingularityDB.bar.texture.color
-          frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
+local function updateBarTexts()
+  for k, v in pairs(Singularity.bars.dynamic) do
+    if type(v) == "table" and v:IsShown() and v.GUID then
+      local str = ""
+      for _, unitID in pairs(SingularityDB.dynSortOrder) do
+        if v.GUID == UnitGUID(unitID) then
+          str = SingularityDB.unitIDSymbols[unitID]
+          break
         end
-        if timeLeft >= SingularityDB.bar.maxTime then
-          cfg = SingularityDB.bar
-          frame.texture:SetWidth(cfg.width - cfg.texture.inset)
-        else
-          local spellName = name
-          local b = SingularityDB.baseDurations[spellName]
-          if b and timeLeft < b * 0.3 + select(4, GetSpellInfo(spellName)) / 1000 or false then -- 30% of base + cast time
-            cfg = SingularityDB.bar.texture.alert
-            frame.texture:SetTexture(cfg.r, cfg.g, cfg.b, cfg.a)
-          end
-          cfg = SingularityDB.bar
-          frame.texture:SetWidth((SingularityDB.bar.width - cfg.texture.inset) * timeLeft / cfg.maxTime)
-        end
-      else
-        frame.active = false
-        frame.texture:SetTexture(0, 0, 0, 0)
-        if name == "Surge of Darkness" then
-          Singularity_updateSurgeText()
-        end
-        frame:SetScript("OnUpdate", nil)
       end
-    end
-  end)
-end
-
-local function readDebuffList()
-  for _, entry in ipairs(activeDebuffs) do
-    if UnitGUID("target") == entry["targetGUID"] then
-      targetBars[entry["spellName"]].active = true
-      runTimer(targetBars[entry["spellName"]], entry["expires"])
-
-      if entry["spellName"] == "Insanity" or entry["spellName"] == "Mind Flay" or entry["spellName"] == "Mind Sear" then -- Hide the two others
-        for _, spellName in ipairs{"Insanity", "Mind Flay", "Mind Sear"} do
-          if targetBars[spellName] then
-            targetBars[spellName]:SetAlpha(0)
-          end
-        end
-        targetBars[entry["spellName"]]:SetAlpha(1)
-      end
+      -- v.fs:SetText(str .. v.name)
+      v.fs1:SetText(v.name)
+      v.fs2:SetText(str)
     end
   end
 end
 
-local function updateDebuffList(targetGUID, spellName, expires)
-  for n, entry in ipairs(activeDebuffs) do
-    if entry["targetGUID"] == targetGUID and entry["spellName"] == spellName then
-      table.remove(activeDebuffs, n)
-      break
-    end
-  end
-
-  if expires > 0 then
-    table.insert(activeDebuffs, {["targetGUID"] = targetGUID, ["spellName"] = spellName, ["expires"] = expires})
-  end
-end
-
-
-
--- Global functions (called from SingularityConfig)
-function Singularity_updateBars()
-  local cfg
-  for spellName, frame in pairs(targetBars) do
-    cfg = SingularityDB.bar
-    frame:SetSize(cfg.width, cfg.height)
-    frame:SetBackdrop(cfg.backdrop)
-    cfg = cfg.backdrop.borderColor
-    frame:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
-    cfg = SingularityDB.bar.backdrop.color
-    frame:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
-    cfg = SingularityDB.bar
-    frame.texture:SetSize(cfg.width - cfg.texture.inset, cfg.height - cfg.texture.inset)
-    cfg = cfg.icon
-    frame.iconTexture:SetTexCoord(cfg.coords.l, cfg.coords.r, cfg.coords.t, cfg.coords.b)
-    frame.iconTexture:SetSize(cfg.width, cfg.height)
-    frame.iconTexture:SetPoint("RIGHT", frame, "LEFT", cfg.xOffset, 0)
-  end
-
-  cfg = SingularityDB.targetContainer
-  targetBarContainer:SetBackdrop(cfg.backdrop)
-  cfg = cfg.backdrop.borderColor
-  targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
-  cfg = SingularityDB.targetContainer.backdrop.color
-  targetBarContainer:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
-
-  cfg = SingularityDB.bar.icon
-  local width = SingularityDB.bar.width + SingularityDB.targetContainer.spacing + cfg.width + -cfg.xOffset + 1
-
-  targetBarContainer:SetWidth(SingularityDB.bar.width + SingularityDB.targetContainer.spacing * 2 + cfg.width + -cfg.xOffset + 2)
-
-  cfg = SingularityDB.targetContainer
-  if _G[cfg.parentFrame] == nil then
-    local f = CreateFrame("Frame")
-    f:SetScript("OnUpdate", function()
-      if _G[cfg.parentFrame] ~= nil then
-        targetBarContainer:SetParent(cfg.parentFrame)
-        f:SetScript("OnUpdate", nil)
-      end
-    end)
+local function updateStackTexts()
+  local currPow = UnitPower("player", SingularityDB.secondaryResource)
+  local powBar = Singularity.bars.static[SingularityDB.secondaryResourceBar]
+  powBar.icon.fs:SetText(currPow)
+  if currPow < SingularityDB.secondaryResourceBreakpoint then
+    powBar.icon.fs:SetTextColor(1, 1, 1, 1)
   else
-    targetBarContainer:SetParent(cfg.parentFrame)
+    powBar.icon.fs:SetTextColor(unpack(SingularityDB.secondaryResourceAlertColor))
   end
-
-  targetBarContainer:ClearAllPoints()
-
-  if _G[cfg.anchorFrame] == nil then
-    local f = CreateFrame("Frame")
-    f:SetScript("OnUpdate", function()
-      if _G[cfg.anchorFrame] ~= nil then
-        targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-        f:SetScript("OnUpdate", nil)
-      end
-    end)
-  else
-    targetBarContainer:SetPoint(cfg.anchorFrom, cfg.anchorFrame, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  end
-
-  for spellName, frame in pairs(targetBars) do
-    if shouldShowBar(spellName) then
-      frame:Show()
-    else
-      frame:Hide()
+  for spellID in pairs(SingularityDB.buffs) do
+    if IsPlayerSpell(spellID) and SingularityDB.texts[spellID] then
+      Singularity.bars.static[SingularityDB.texts[spellID]].icon.fs:SetText("")
     end
   end
-
-  local numBars = SingularityDB.hiddenSpells["Mind Flay"] and 0 or 1
-  for _, spellName in ipairs(SingularityDB.barDisplayOrder) do
-    if targetBars[spellName] ~= nil then
-      if targetBars[spellName]:IsShown() then
-        if spellName ~= "Insanity" and spellName ~= "Mind Flay" and spellName ~= "Mind Sear" then
-          numBars = numBars + 1
-        end
-        local xOffset = SingularityDB.targetContainer.spacing
-        xOffset = xOffset + SingularityDB.bar.icon.width - SingularityDB.bar.icon.xOffset + 1
-        targetBars[spellName]:SetPoint("TOPLEFT", targetBarContainer, "TOPLEFT", xOffset, -(SingularityDB.bar.height + SingularityDB.bar.spacing) * (numBars - 1) - SingularityDB.targetContainer.spacing - 1)
-      end
-    end
-  end
-
-  local cfg = SingularityDB.bar
-  targetBarContainer:SetHeight((cfg.height + cfg.spacing) * numBars + SingularityDB.targetContainer.spacing * 2 + 1)
-  gcdBar:SetSize(cfg.width - cfg.texture.inset, targetBarContainer:GetHeight() - SingularityDB.targetContainer.spacing - 2)
-  gcdBar.texture:SetHeight(gcdBar:GetHeight())
-
-  if not shouldShowBar("Insanity") then
-    targetBars["Mind Flay"]:SetAlpha(1)
-  end
 end
 
-function Singularity_updateFonts()
-  local cfg = SingularityDB.bar.text
-  for k, v in pairs(targetBars) do
-    v.stackText:SetFont(cfg.fontPath, cfg.fontSize, cfg.fontFlags)
-    v.stackText:ClearAllPoints()
-    v.stackText:SetPoint(cfg.anchorFrom, v.iconTexture, cfg.anchorTo, cfg.xOffset, cfg.yOffset)
-  end
-end
-
-function Singularity_updateOrbsText()
-  local orbs = UnitPower("player", SPELL_POWER_SHADOW_ORBS)
-  if not SingularityDB.alwaysShowOrbsText then
-    orbs = orbs > 0 and orbs or "" -- Show nothing at 0 Orbs
-  end
-
-  local text = targetBars["Mind Blast"].stackText
-
-  if orbs ~= "" and orbs >= 3 then
-    text:SetTextColor(0, 1, 0, 1)
-  else
-    text:SetTextColor(1, 1, 1, 1)
-  end
-
-  text:SetText(orbs)
-end
-
-function Singularity_updateSpikeText()
-  local glyphIsInUse = false
-  for i = 1, 6 do
-    if select(4, GetGlyphSocketInfo(i, GetActiveSpecGroup())) == 33371 then
-      glyphIsInUse = true
-    end
-  end
-
-  local text = select(4, UnitBuff("player", "Glyph of Mind Spike")) or 0
-
-  if (text == 0 and not SingularityDB.alwaysShowSpikeText) or not glyphIsInUse then
-    text = ""
-  end
-
-  for _, spellName in ipairs(SingularityDB.channeledSpells) do
-    targetBars[spellName].stackText:SetText(text)
-  end
-end
-
-function Singularity_updateSurgeText()
-  if not shouldShowBar("Surge of Darkness") then
-    return
-  end
-
-  local text = select(4, UnitBuff("player", "Surge of Darkness")) or 0
-
-  if text == 0 and not SingularityDB.alwaysShowSurgeText then
-    text = ""
-  end
-
-  targetBars["Surge of Darkness"].stackText:SetText(text)
-end
-
-
-
--- Startup stuff
 local function onUpdate(self, elapsed)
-  self.dt = self.dt + elapsed
-  if self.dt < SingularityDB.updateInterval then -- Update Shadow Word: Death desaturation and range display at most every 50 ms, just in case it might make a difference to someone's FPS sometime
-    return
-  else
-    self.dt = self.dt - SingularityDB.updateInterval
+  -- self.dt = self.dt + elapsed
+  -- if self.dt < SingularityDB.updateInterval then -- Update Shadow Word: Death desaturation and range display at most every 50 ms, just in case it might make a difference to someone's FPS sometime
+  --   return
+  -- else
+    -- self.dt = self.dt - SingularityDB.updateInterval
+  -- end
+  if haveMouseover and not UnitExists("mouseover") then
+    haveMouseover = false
+    updateBarTexts()
   end
 
-  if UnitHealth("target") > UnitHealthMax("target") * 0.2 then
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-  else
-    desaturate(targetBars["Shadow Word: Death"].iconTexture, false)
+  if SingularityDB.DeathBar then
+    if (not UnitExists("target")) or UnitHealth("target") > UnitHealthMax("target") * 0.2 then
+      Singularity.bars.static[SingularityDB.DeathBar].icon.tex:SetDesaturated(true)
+    else
+      Singularity.bars.static[SingularityDB.DeathBar].icon.tex:SetDesaturated(false)
+    end
   end
 
   if rc == nil then
@@ -485,330 +214,648 @@ local function onUpdate(self, elapsed)
     return
   end
 
-  if shouldShowBar("Cascade") then
-    targetBars["Cascade"].stackText:SetText(maxRange)
-    local t = targetBars["Cascade"].stackText
+  Singularity.bars.static[SingularityDB.rangeTextBar].icon.fs:SetText(maxRange)
+  local r, g, b, a
+
+  if IsPlayerSpell(127632) then -- Cascade
     if maxRange <= 30 then
-      t:SetTextColor(1, 1, 0, 1)
+      r, g, b = 1, 1, 0
     elseif maxRange <= 40 then
-      t:SetTextColor(0, 1, 0, 1)
+      r, g, b = 0, 1, 0
     else
-      t:SetTextColor(1, 0, 0, 1)
+      r, g, b = 1, 0, 0
     end
-  elseif shouldShowBar("Divine Star") then
-    targetBars["Divine Star"].stackText:SetText(maxRange)
-    local t = targetBars["Divine Star"].stackText
+  elseif IsPlayerSpell(122121) then -- Divine Star
     if maxRange < 25 then
-      t:SetTextColor(0, 1, 0, 1)
+      r, g, b = 0, 1, 0
     elseif maxRange == 25 then
-      t:SetTextColor(1, 1, 0, 1)
+      r, g, b = 1, 1, 0
     else
-      t:SetTextColor(1, 0, 0, 1)
+      r, g, b = 1, 0, 0
     end
-  elseif shouldShowBar("Halo") then
-    targetBars["Halo"].stackText:SetText(maxRange)
-    local t = targetBars["Halo"].stackText
+  elseif IsPlayerSpell(120644) then -- Halo
     if maxRange <= 15 then
-      t:SetTextColor(1, 0, 0, 1)
+      r, g, b = 1, 0, 0
     elseif minRange == 15 and maxRange == 20 then
-      t:SetTextColor(1, 1, 0, 1)
+      r, g, b = 1, 1, 0
     elseif minRange == 20 and maxRange == 25 then
-      t:SetTextColor(0, 1, 0, 1)
+      r, g, b = 0, 1, 0
     elseif minRange == 25 and maxRange == 30 then
-      t:SetTextColor(1, 1, 0, 1)
+      r, g, b = 1, 1, 0
     else
-      t:SetTextColor(1, 0, 0, 1)
+      r, g, b = 1, 0, 0
+    end
+  end
+
+  Singularity.bars.static[SingularityDB.rangeTextBar].icon.fs:SetTextColor(r, g, b, 1)
+end
+
+local function createFrames()
+  Singularity.bars = {}
+
+  local b = Singularity.bars
+  b.dynamic = CreateFrame("frame", nil, Singularity)
+
+  b.gcd = CreateFrame("frame", nil, Singularity)
+  b.gcd.tex = b.gcd:CreateTexture()
+  b.gcd.icon = CreateFrame("frame", nil, b.gcd)
+  b.gcd.icon.tex = b.gcd.icon:CreateTexture()
+  -- b.gcd.icon.fs = b.gcd.icon:CreateFontString()
+  -- b.gcd.icon.fs:SetFont(unpack(SingularityDB.font))
+  b.static = CreateFrame("frame", nil, Singularity)
+  b.static.cast = CreateFrame("frame", nil, b.static)
+  b.static.cast.tex = b.static.cast:CreateTexture()
+  b.static.cast.icon = CreateFrame("frame", nil, b.static.cast)
+  b.static.cast.icon.tex = b.static.cast.icon:CreateTexture()
+  b.static.cast.icon.fs = b.static.cast.icon:CreateFontString()
+  b.dynamic:SetPoint("TOP", b.static, "BOTTOM", 0, -1) -- TODO
+
+  for spellID in pairs(SingularityDB.cooldowns) do
+    b.static[spellID] = CreateFrame("frame", nil, b.static)
+    b.static[spellID].spellID = spellID
+    b.static[spellID].tex = b.static[spellID]:CreateTexture()
+    b.static[spellID].icon = CreateFrame("frame", nil, b.static[spellID])
+    b.static[spellID].icon.tex = b.static[spellID].icon:CreateTexture()
+    b.static[spellID].icon.fs = b.static[spellID].icon:CreateFontString()
+  end
+
+  for spellID in pairs(SingularityDB.buffs) do
+    b.static[spellID] = CreateFrame("frame", nil, b.static)
+    b.static[spellID].spellID = spellID
+    b.static[spellID].tex = b.static[spellID]:CreateTexture()
+    b.static[spellID].icon = CreateFrame("frame", nil, b.static[spellID])
+    b.static[spellID].icon.tex = b.static[spellID].icon:CreateTexture()
+    b.static[spellID].icon.fs = b.static[spellID].icon:CreateFontString()
+  end
+end
+
+local function setupBar(frame, parent, n)
+  local af, at, ox, oy = unpack(SingularityDB.barPoint)
+  local iconW, iconH = unpack(SingularityDB.iconSize)
+  local barW, barH = unpack(SingularityDB.barSize)
+
+  frame:SetSize(unpack(SingularityDB.barSize))
+  frame:SetPoint(af, parent, at, ox + SingularityDB.iconSize[1] / 2, oy - (frame:GetHeight() + SingularityDB.barGap) * n) -- TODO
+
+  frame.tex:SetPoint("LEFT", frame, "LEFT")
+  frame.tex:SetSize(unpack(SingularityDB.barSize))
+  frame.tex:SetTexture(SingularityDB.barTexture)
+  frame.tex:SetVertexColor(unpack(SingularityDB.barColor))
+  frame.tex:SetWidth(0.01) -- So bars don't appear full until they're first used
+
+  local _, _, icon = GetSpellInfo(frame.spellID)
+  af, at, ox, oy = unpack(SingularityDB.iconPoint)
+  ff, ft, fx, fy = unpack(SingularityDB.fontPoint)
+  frame.icon:SetSize(unpack(SingularityDB.iconSize))
+  frame.icon:SetPoint(af, frame, at, ox, oy)
+  frame.icon.tex:SetTexture(icon)
+  frame.icon.tex:SetTexCoord(unpack(SingularityDB.texCoords))
+  frame.icon.tex:SetAllPoints()
+  if frame.icon.fs then
+    frame.icon.fs:SetFont(unpack(SingularityDB.font))
+    frame.icon.fs:SetPoint(ff, frame.icon, ft, fx, fy)
+  end
+end
+
+local function reorderBars()
+  local lastBar = Singularity.bars.dynamic
+
+  for k,v in pairs(Singularity.bars.dynamic) do
+    if type(v) == "table" and v:IsShown() and v.GUID then
+      v:ClearAllPoints()
+      v:SetPoint("TOP", lastBar, "BOTTOM", 0, -1)
+      lastBar = v
+
+      local w, h = unpack(SingularityDB.dynBarSize)
+      local af, at, ox, oy = unpack(SingularityDB.barPoint)
+      local iconW, iconH = unpack(SingularityDB.dynIconSize)
+      local n = 0
+
+      for splID, frame in pairs(v) do
+        if type(frame) == "table" and frame.spellID and frame:IsShown() then
+          frame:SetPoint(af, v, at, ox + iconW / 2, oy - (h + SingularityDB.barGap) * n)
+          n = n + 1
+        end
+      end
+
+      v:SetHeight(h * n + n + 1)
+
+      updateBarTexts()
     end
   end
 end
 
-local function init()
-  local function loadSettings()
-    SingularityDB = SingularityDB or {}
+local function clearFrame(self)
+  local p = self.GUID and self or self:GetParent()
 
-    for k,v in pairs(defaults) do
-      if type(SingularityDB[k]) == "nil" then
-        SingularityDB[k] = v
+  local test = true
+
+  for _, frame in pairs(p) do
+    if type(frame) == "table" then
+      if frame.isActive then
+        test = false
       end
     end
   end
 
-  local function setupBar(spellName, spellID)
-    targetBars[spellName] = CreateFrame("Frame", "Singularity_Bar_" .. spellName, targetBarContainer)
-    local b = targetBars[spellName]
-    local cfg = SingularityDB.bar.icon
-    b.iconTexture = b:CreateTexture()
-    b.iconTexture:SetPoint("RIGHT", b, "LEFT", cfg.xOffset, cfg.yOffset)
-    b.iconTexture:SetTexture(select(3, GetSpellInfo(spellID)))
-    b.stackText = b:CreateFontString()
-    b.texture = b:CreateTexture()
-    b.texture:SetPoint("LEFT", b, "LEFT", 0, 0)
-
-    cfg = SingularityDB.bar
-    b.texture:SetHeight(cfg.height - cfg.texture.inset)
-    b.active = false
+  if test then
+    p.GUID = nil
+    p:Hide()
+    reorderBars()
   end
-
-  loadSettings()
-
-  activeDebuffs = {} -- A list of all debuffs the player has active; {{["targetGUID"], ["spellName"], ["expires"]}, ...}
-  targetBarContainer = CreateFrame("Frame", "Singularity", UIParent)
-  targetBars = {} -- A list of bar frames; {["spellName"] = CreateFrame(), ...}
-
-  for spellName, spellID in pairs(SingularityDB.cooldowns) do
-    setupBar(spellName, spellID)
-  end
-  desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-  for spellName, spellID in pairs(SingularityDB.buffs) do
-    setupBar(spellName, spellID)
-  end
-  for spellName, spellID in pairs(SingularityDB.debuffs) do
-    setupBar(spellName, spellID)
-  end
-
-  gcdBar = CreateFrame("Frame", "Singularity_Bar_GCD", targetBarContainer)
-  gcdBar.texture = gcdBar:CreateTexture()
-
-  if targetBars["Mind Sear"] ~= nil then
-    targetBars["Mind Sear"]:SetAlpha(0)
-  end
-  if targetBars["Insanity"] ~= nil then
-    targetBars["Insanity"]:SetAlpha(0)
-  end
-
-  local cfg = SingularityDB.targetContainer
-
-  targetBarContainer:SetBackdrop(cfg.backdrop)
-  cfg = cfg.backdrop.borderColor
-  targetBarContainer:SetBackdropBorderColor(cfg.r, cfg.g, cfg.b, cfg.a)
-  cfg = SingularityDB.targetContainer.backdrop.color
-  targetBarContainer:SetBackdropColor(cfg.r, cfg.g, cfg.b, cfg.a)
-  targetBarContainer:SetSize(SingularityDB.bar.width + SingularityDB.targetContainer.spacing, 0)
-
-  gcdBar:SetFrameStrata("HIGH")
-  gcdBar:SetPoint("TOPLEFT", targetBars["Mind Flay"], "TOPLEFT", SingularityDB.bar.texture.inset, 0) -- Note: Depends on there being a Mind Flay bar
-  gcdBar.texture:SetPoint("LEFT", gcdBar, "LEFT")
-
-  Singularity_updateBars()
-  Singularity_updateFonts()
-  Singularity_updateSurgeText()
-  Singularity_updateSpikeText()
-  Singularity_updateOrbsText()
-
-  if SingularityDB.hideWithNoTarget then
-    targetBarContainer:Hide()
-  end
-
-  f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-  f:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
-  f:RegisterEvent("PET_BATTLE_OPENING_START")
-  f:RegisterEvent("PLAYER_DEAD")
-  f:RegisterEvent("PLAYER_TALENT_UPDATE")
-  f:RegisterEvent("PLAYER_TARGET_CHANGED")
-  f:RegisterEvent("UNIT_AURA")
-  f:RegisterEvent("UNIT_ENTERING_VEHICLE")
-  f:RegisterEvent("UNIT_EXITED_VEHICLE")
-  f:RegisterEvent("UNIT_FACTION")
-  f:RegisterEvent("UNIT_FLAGS")
-  f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-  f:UnregisterEvent("ADDON_LOADED")
-
-  f:SetScript("OnUpdate", onUpdate)
 end
 
-local function processEvents(self, event, ...)
-  if event == "ADDON_LOADED" and select(1, ...) == "Singularity" then -- Create frames, load options, etc.
-    init()
+local function eventHandler(self, event, ...)
+  -- Also listen for target changing to trigger DoT frame reordering, death to trigger text and buff updates, maybe vehicle stuff to trigger hiding. Maybe set the Singularity frame to be shown on seeing an interesting cast/buff/whatever as a failsafe, because if those things happen then clearly the player isn't in a vehicle.
+  -- print("eventHandler", event, ...)
+
+  if event == "PLAYER_REGEN_ENABLED" then
+    if SingularityDB.hideOOC then
+      Singularity:Hide()
+      Singularity.bars.static:Hide()
+      Singularity.bars.dynamic:Hide()
+    end
+    return
+  end
+
+  if event == "PLAYER_REGEN_DISABLED" then
+    Singularity:Show()
+    Singularity.bars.static:Show()
+    Singularity.bars.dynamic:Show()
+    return
+  end
+
+  if event == "PLAYER_TALENT_UPDATE" or event == "GLYPH_ADDED" or event == "GLYPH_REMOVED" or event == "GLYPH_UPDATED" or event == "PLAYER_ENTERING_WORLD" then
+    Singularity.loadSettings()
+    updateStackTexts()
     return
   end
 
   if event == "PLAYER_DEAD" then
-    Singularity_updateSurgeText()
-    Singularity_updateOrbsText()
-    Singularity_updateSurgeText()
+    updateStackTexts()
     return
   end
 
-  if event == "UNIT_AURA" and select(1, ...) == "player" then
-    Singularity_updateSurgeText()
-    return
-  end
+  if event == "PLAYER_TARGET_CHANGED" or event == "UPDATE_MOUSEOVER_UNIT" or event == "PLAYER_FOCUS_CHANGED" then
+    local first, second, third = unpack(SingularityDB.dynSortOrder)
 
-  if event == "PLAYER_ENTERING_WORLD" and currSpec == "Shadow" then -- Recheck buffs and cooldowns after reloading UI (which deselects the player's target, so no need to check for target debuffs here)
-    for spellName, _ in pairs(SingularityDB.buffs) do
-      local expires = select(7, UnitBuff("player", spellName))
-      if expires then
-        targetBars[spellName].active = true
-        runTimer(targetBars[spellName], expires)
-      end
-    end
-    for spellName, _ in pairs(SingularityDB.cooldowns) do
-      local cd = GetSpellCooldown(spellName)
-      if cd and cd > 0 then
-        targetBars[spellName].active = true
-        runTimer(targetBars[spellName], 0)
-      end
-    end
-    Singularity_updateSpikeText()
-    Singularity_updateOrbsText()
-    Singularity_updateSurgeText()
-    return
-  end
+    local p = Singularity.bars.dynamic
+    local n
 
-  if event == "PLAYER_TALENT_UPDATE" then
-    Singularity_updateSpikeText()
-    Singularity_updateSurgeText()
-    Singularity_updateBars()
-    return
-  end
-
-  if event == "CURRENT_SPELL_CAST_CHANGED" then -- Fires whenever the player starts or stops casting, so whenever the GCD is started or cancelled
-    gcdBar.active = true
-    local startTime, duration = GetSpellCooldown(61304) -- Global Cooldown
-    runTimer(gcdBar, startTime + duration)
-    return
-  end
-
-  if event == "UNIT_SPELLCAST_CHANNEL_STOP" and ... == "player" then -- Clear the Insanity/Mind Flay/Mind Sear bar when the player stops channeling
-    for _, spellName in ipairs(SingularityDB.channeledSpells) do
-      if targetBars[spellName] then
-        targetBars[spellName].active = false
-      end
-    end
-    return
-  end
-
-  if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_FACTION" or event == "UNIT_FLAGS" then -- When the player changes targets or the current target changes hostility, clear the current debuff timers and replace them with the debuff timers for the new target
-    for spellName, _ in pairs(SingularityDB.debuffs) do
-      targetBars[spellName].active = false
+    if (not haveMouseover) and UnitExists("mouseover") then
+      haveMouseover = true
     end
 
-    if not UnitExists("target") or UnitIsFriend("player", "target") or UnitHasVehicleUI("player") then
-      -- f:SetScript("OnUpdate", nil)
-      desaturate(targetBars["Shadow Word: Death"].iconTexture, true)
-      targetBars["Cascade"].stackText:SetTextColor(0, 0, 0, 0)
-      targetBars["Divine Star"].stackText:SetTextColor(0, 0, 0, 0)
-      targetBars["Halo"].stackText:SetTextColor(0, 0, 0, 0)
-      if SingularityDB.hideWithNoTarget then
-        targetBarContainer:Hide()
-      end
-      return
-    end
+    for i = #p, 1, -1 do
+      local test = false
 
-    if UnitExists("target") then
-      -- f:SetScript("OnUpdate", onUpdate)
-
-      local _, currSpec = GetSpecializationInfo(GetSpecialization())
-
-      if SingularityDB.hideWithNoTarget and currSpec == "Shadow" then
-        targetBarContainer:Show()
-      end
-
-      for spellName, spellID in pairs(SingularityDB.debuffs) do
-        local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER"))
-
-        if expires then
-          updateDebuffList(UnitGUID("target"), spellName, expires)
-        end
-      end
-      readDebuffList()
-
-      for spellName, spellID in pairs(SingularityDB.buffs) do
-        local expires = select(7, UnitBuff("player", spellName))
-
-        if expires then
-          targetBars[spellName].active = true
-          runTimer(targetBars[spellName], expires)
+      for k, v in pairs(SingularityDB.dynSortOrder) do
+        if UnitGUID(v) and p[i].GUID == UnitGUID(v) then
+          test = true
+          n = k
+          break
         end
       end
 
-      for spellName, spellID in pairs(SingularityDB.cooldowns) do
-        local startTime, duration = GetSpellCooldown(spellID)
+      if test then
+        local tmp = p[i]
+        table.remove(p, i)
+        table.insert(p, n, tmp)
+      end
+    end
 
-        if duration > 0 then
-          targetBars[spellName].active = true
-          runTimer(targetBars[spellName], startTime + duration)
+    reorderBars()
+  end
+
+  if event == "COMBAT_LOG_EVENT_UNFILTERED" then -- Handle DoTs and Orbs
+    local timestamp, subevent, _, srcGUID, _, _, _, tarGUID, tarName, _, _, spellID, _, _, _, powerType = ...
+
+    if srcGUID ~= UnitGUID("player") then return end
+
+    if subevent == "SPELL_ENERGIZE" then
+      if powerType ~= SingularityDB.secondaryResource then return end
+      updateStackTexts()
+      return
+    end
+
+    if not SingularityDB.showDoTBars then return end
+
+    -- Refresh Void Entropy timer with Devouring Plague
+    if IsPlayerSpell(155361) and subevent == "SPELL_CAST_SUCCESS" and IsPlayerSpell(2944) and spellID == 2944 then
+      for k, v in pairs(Singularity.bars.dynamic) do
+        if type(v) == "table" and v.GUID == tarGUID then
+          for _, unitID in pairs(SingularityDB.dynSortOrder) do
+            if UnitGUID(unitID) == tarGUID then
+              _, _, _, _, _, _, expires = UnitDebuff(unitID, GetSpellInfo(155361), "", "PLAYER")
+              v[155361].expires = expires
+              break
+            end
+          end
+        end
+      end
+    end
+
+    if not SingularityDB.dots[spellID] then return end
+
+    if subevent == "SPELL_AURA_APPLIED" then
+      local test = true
+      local p
+      for k,v in pairs(Singularity.bars.dynamic) do
+        if type(v) == "table" then
+          local bar = v
+          -- print(bar,bar.GUID,tarGUID)
+          if (not bar.GUID) or bar.GUID == tarGUID then -- Reuse unit frame
+            test = false
+            -- print("reusing unit frame")
+            p = bar
+            p:Show()
+            break
+          end
         end
       end
 
+      if test then -- Create unit frame
+        -- print("creating unit frame",#Singularity.bars.dynamic)
+        p = CreateFrame("frame", nil, Singularity.bars.dynamic)
+        table.insert(Singularity.bars.dynamic, p)
+        p:SetBackdrop(SingularityDB.backdrop)
+        p:SetBackdropColor(0, 0, 0, 0.5)
+        p:SetBackdropBorderColor(0, 0, 0, 1)
+        local w = SingularityDB.dynBarSize[1]
+        local iconW = SingularityDB.dynIconSize[1]
+        p:SetSize(w + iconW + 2 + 1, 1)
+        local n = 0
+
+        for splID in pairs(SingularityDB.dots) do -- Create spell frames
+          if not p[splID] then
+            p[splID] = CreateFrame("frame", nil, p)
+            p[splID].spellID = splID
+            p[splID].tex = p[splID]:CreateTexture()
+            p[splID].icon = CreateFrame("frame", nil, p[splID])
+            p[splID].icon.tex = p[splID].icon:CreateTexture()
+            p[splID].icon.fs = p[splID].icon:CreateFontString()
+            p[splID].icon.fs:SetFont(unpack(SingularityDB.font))
+            p[splID]:Hide()
+            setupBar(p[splID], p, n)
+            p[splID]:SetHeight(SingularityDB.dynBarSize[2])
+            p[splID].tex:SetHeight(SingularityDB.dynBarSize[2])
+            p[splID].icon:SetHeight(SingularityDB.dynBarSize[2])
+            p[splID].icon.tex:SetTexCoord(unpack(SingularityDB.dynTexCoords))
+            p[splID]:SetWidth(SingularityDB.dynBarSize[1])
+            p[splID].icon:SetWidth(SingularityDB.dynBarSize[2])
+            n = n + 1
+          end
+        end
+
+        p.textFrame = CreateFrame("frame", nil, p)
+
+        p.fs1 = p.textFrame:CreateFontString()
+        p.fs1:SetFont(unpack(SingularityDB.font))
+        local from, to, x, y = unpack(SingularityDB.dynTextPoint)
+        p.fs1:SetPoint(from, p, to, x, y)
+
+        p.fs2 = p.textFrame:CreateFontString()
+        p.fs2:SetFont(unpack(SingularityDB.font))
+        local from, to, x, y = unpack(SingularityDB.dynText2Point)
+        p.fs2:SetPoint(from, p, to, x, y)
+
+        p:SetFrameStrata("HIGH")
+      end
+
+      local f = p[spellID]
+      f:Show()
+      p.name = tarName:gsub("%S+%s", function(s) return s:sub(1,1) .. ". " end)
+      p.GUID = tarGUID
+
+
+
+      reorderBars()
+
+      f.baseDuration = SingularityDB.baseDuration[spellID]
+      f.expires = GetTime() + f.baseDuration
+      f.isActive = true
+      f.set = true
+
+      f:SetScript("OnUpdate", function()
+        local _, _, _, castTime = GetSpellInfo(f.spellID)
+        castTime = castTime / 1000
+        f.timeLeft = max(f.expires - GetTime(), 0.01)
+        f.tex:SetWidth(SingularityDB.dynBarSize[1] * min(f.timeLeft / SingularityDB.barMaxTime, 1))
+
+        local expiring = f.timeLeft - castTime <= f.baseDuration * 0.3
+
+        if not expiring and f.set then
+          f.set = false
+          f.tex:SetVertexColor(unpack(SingularityDB.barColor))
+        elseif expiring and not f.set then
+          f.set = true
+          f.tex:SetVertexColor(unpack(SingularityDB.barRefreshColor))
+        end
+
+        if f.timeLeft == 0.01 then
+          f:SetScript("OnUpdate", nil)
+        end
+      end)
+
       return
     end
-  end
 
-  if event == "UNIT_ENTERING_VEHICLE" and ... == "player" then
-    -- targetBarContainer:Hide()
+    if subevent == "SPELL_AURA_REFRESH" then
+      for _, frame in pairs(Singularity.bars.dynamic) do
+        if type(frame) == "table" then
+          if frame.GUID == tarGUID then
+            local f = frame[spellID]
+            f.expires = f.expires + min(f.baseDuration, f.baseDuration * 1.3 - f.timeLeft)
+            break
+          end
+        end
+      end
+      return
+    end
+
+    if subevent == "SPELL_AURA_REMOVED" then
+      local p
+      for _, frame in pairs(Singularity.bars.dynamic) do
+        if type(frame) == "table" then
+          if frame.GUID == tarGUID then
+            p = frame
+            local f = p[spellID]
+            f.isActive = false
+            f.tex:SetWidth(0.01)
+            f:SetScript("OnUpdate", nil)
+            break
+          end
+        end
+      end
+
+      if p then
+        p[spellID]:Hide()
+        clearFrame(p[spellID])
+        reorderBars()
+      end
+      return
+    end
+
+    if subevent == "UNIT_DIED" then
+      clearFrame(Singularity.bars.dynamic[tarGUID])
+    end
+
     return
   end
 
-  if event == "UNIT_EXITED_VEHICLE" and ... == "player" and not SingularityDB.hideWithNoTarget then
-    targetBarContainer:Show()
+  if event == "UNIT_AURA" then -- Handle buffs
+    local unitID = ...
+
+    if unitID ~= "player" then return end
+
+    for spellID in pairs(SingularityDB.buffs) do
+      if IsPlayerSpell(spellID) then
+        local name = GetSpellInfo(spellID)
+        local _, _, _, count, _, _, expires = UnitBuff("player", name, "", "PLAYER")
+
+        local p = Singularity.bars.static
+        local f = p[spellID]
+        f.expires = expires or 0
+
+        if SingularityDB.texts[spellID] then
+          Singularity.bars.static[SingularityDB.texts[spellID]].icon.fs:SetText(count)
+        end
+
+        f:SetScript("OnUpdate", function()
+          f.timeLeft = max(f.expires - GetTime(), 0.01)
+          f.tex:SetWidth(SingularityDB.barSize[1] * min(f.timeLeft / SingularityDB.barMaxTime, 1))
+          if f.timeLeft == 0.01 then
+            f:SetScript("OnUpdate", nil)
+          end
+        end)
+      end
+    end
+
     return
   end
 
-  if event == "SPELL_UPDATE_USABLE" or (event == "UNIT_SPELLCAST_INTERRUPTED" and ... == "player") then -- When a cooldown begins or ends, update cooldown bars
-    for spellName, spellID in pairs(SingularityDB.cooldowns) do
-      local startTime, duration = GetSpellCooldown(spellID)
-      targetBars[spellName].active = true
-      runTimer(targetBars[spellName], startTime + duration)
-    end
+  if event == "UNIT_SPELLCAST_SENT" then -- Handle the GCD
+    local unitID = ...
+    if unitID ~= "player" then return end
+
+    local f = Singularity.bars.gcd
+    f:SetScript("OnUpdate", function()
+      local started, duration = GetSpellCooldown(61304)
+      if started then
+        f.expires = GetTime() + duration
+        f:SetScript("OnUpdate", function()
+          f.timeLeft = max(f.expires - GetTime(), 0.01)
+          f.tex:SetWidth(SingularityDB.barSize[1] * min(f.timeLeft / SingularityDB.barMaxTime, 1))
+          if f.timeLeft == 0 then
+            f:SetScript("OnUpdate", nil)
+          end
+        end)
+      end
+    end)
+  end
+
+  if (not SingularityDB.hiddenBars["cast"]) and (event == "UNIT_SPELLCAST_CHANNEL_START" or event == "UNIT_SPELLCAST_START") then -- Handle casts
+    local unitID, _, _, _, spellID = ...
+    if unitID ~= "player" then return end
+
+    local _, _, _, _, _, expires = UnitChannelInfo(unitID)
+    if not expires then _, _, _, _, _, expires = UnitCastingInfo(unitID) end
+    expires = expires and expires / 1000 or GetTime()
+    local _, _, icon = GetSpellInfo(spellID)
+
+    local f = Singularity.bars.static.cast
+    f.icon.tex:SetTexture(icon)
+
+    f.expires = expires
+    f:SetScript("OnUpdate", function()
+      f.timeLeft = max(f.expires - GetTime(), 0.01) -- Texture:SetWidth doesn't seem to like 0 as an argument
+      f.tex:SetWidth(SingularityDB.barSize[1] * min(f.timeLeft / SingularityDB.barMaxTime, 1))
+    end)
     return
   end
 
-  if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-    local _, type, _, sourceGUID, sourceName, _, _, targetGUID, targetName, _, _, spellID, spellName, _, _, powerType = ...
+  if event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_CHANNEL_STOP" then -- Handle aborted casts
+    local unitID, _, _, _, spellID = ...
+    if unitID ~= "player" then return end
 
-    if sourceGUID ~= UnitGUID("player") then -- We're only interested in spells cast by the player
-      return
+    Singularity.bars.static.cast:SetScript("OnUpdate", nil)
+    Singularity.bars.static.cast.tex:SetWidth(0.01)
+
+    return
+  end
+
+  if event == "UNIT_SPELLCAST_SUCCEEDED" then -- Handle cooldowns
+    local unitID, _, _, _, spellID = ...
+    if unitID ~= "player" then return end
+    if SingularityDB.hiddenBars[spellID] then return end
+    if spellID == 2944 or spellID == 155361 then
+      updateStackTexts()
     end
 
-    if type == "SPELL_PERIODIC_DAMAGE" and (spellName == "Vampiric Touch" or spellName == "Devouring Plague") then
-      Singularity_updateSurgeText()
-    end
+    if not SingularityDB.cooldowns[SingularityDB.links[spellID] or spellID] then return end
+    local f = Singularity.bars.static[SingularityDB.links[spellID] or spellID]
 
-    if (type == "SPELL_ENERGIZE" and powerType == SPELL_POWER_SHADOW_ORBS) or isInList(spellName, SingularityDB.orbSpenders) then -- If the spell generates or spends Shadow Orbs, update the Shadow Orbs display
-      Singularity_updateOrbsText()
-      return
-    end
+    -- Have SingularityDB.cooldowns[spellID].alts = {}, being a table of spellIDs to hide when this one activates
 
-    if type == "SPELL_CAST_SUCCESS" and spellName == "Mind Spike" then -- If the player casts Mind Spike and is using Glyph of Mind Spike, update the Glyph of Mind Spike counter
-      Singularity_updateSpikeText()
-      return
-    end
+    local started, duration
+    local elapsed = 0
 
-    if type == "SPELL_CAST_SUCCESS" and isInList(spellName, SingularityDB.cooldowns) then
-      local startTime, duration = GetSpellCooldown(spellID)
-      targetBars[spellName].active = true
-      runTimer(targetBars[spellName], startTime + duration)
-    end
-
-    if type == "SPELL_AURA_APPLIED" or type == "SPELL_AURA_REFRESH" or type == "SPELL_AURA_REMOVED" or type == "SPELL_AURA_APPLIED_DOSE" then -- Buffs and debuffs
-      if isInList(spellName, SingularityDB.buffs) then
-        local expires = select(7, UnitBuff("player", spellName)) or 0 -- 0 if the buff isn't on the target, i.e. if we got here from SPELL_AURA_REMOVED
-        targetBars[spellName].active = true
-        runTimer(targetBars[spellName], expires)
-        Singularity_updateSpikeText()
-        Singularity_updateSurgeText()
+    f:SetScript("OnUpdate", function(self, dt)
+      elapsed = elapsed + dt
+      if elapsed > 1 then
+        f:SetScript("OnUpdate", nil) -- In case... something? ¯\_(ツ)_/¯
       end
-
-      if isInList(spellName, SingularityDB.debuffs) then
-        local expires = select(7, UnitDebuff("target", spellName, "", "PLAYER")) or 0 -- 0 if the debuff isn't on the unit, i.e. if we got here from SPELL_AURA_REMOVED
-        updateDebuffList(targetGUID, spellName, expires)
-        readDebuffList()
+      started, duration = GetSpellCooldown(spellID)
+      if started and started > 0 then
+        f.expires = GetTime() + duration
+        f:SetScript("OnUpdate", function()
+          local _, duration = GetSpellCooldown(spellID)
+          -- f.timeLeft = max(f.expires - GetTime(), 0.01)
+          f.timeLeft = max(started + duration - GetTime(), 0.01)
+          f.tex:SetWidth(SingularityDB.barSize[1] * min(f.timeLeft / SingularityDB.barMaxTime, 1))
+          if f.timeLeft == 0.01 then
+            f:SetScript("OnUpdate", nil)
+          end
+        end)
       end
+    end)
+    return
+  end
+end
 
-      if type == "SPELL_AURA_REMOVED" and targetGUID == UnitGUID("target") and targetBars[spellName] then
-        targetBars[spellName].active = false
+local k = 1
+
+local function loadSettings()
+  SingularityDB.dynBarSize[1] = SingularityDB.barSize[1] + (SingularityDB.iconSize[1] - SingularityDB.dynIconSize[1])
+
+  Singularity.bars.static:SetParent(SingularityDB.staticParent)
+  Singularity.bars.dynamic:SetParent(SingularityDB.staticParent)
+
+  Singularity.bars.static:SetPoint(unpack(SingularityDB.SingularityPoint))
+  Singularity.bars.static:SetSize(SingularityDB.barSize[1] + SingularityDB.iconSize[1] + 3, SingularityDB.barSize[2])
+  Singularity.bars.static:SetBackdrop(SingularityDB.backdrop)
+  local c = SingularityDB.backdrop.color
+  Singularity.bars.static:SetBackdropColor(c.r, c.g, c.b, c.a)
+  local c = SingularityDB.backdrop.borderColor
+  Singularity.bars.static:SetBackdropBorderColor(c.r, c.g, c.b, c.a)
+  Singularity.bars.dynamic:SetPoint("TOP", Singularity.bars.static, "BOTTOM", 0, 1)
+  Singularity.bars.dynamic:SetSize(1,1)
+
+  Singularity:UnregisterAllEvents()
+  for _, event in pairs(SingularityDB.trackedEvents) do
+    Singularity:RegisterEvent(event)
+  end
+
+  Singularity:SetScript("OnUpdate", onUpdate)
+  Singularity:SetScript("OnEvent", eventHandler)
+
+  local p = Singularity.bars.static
+
+  local n = 0
+
+  for i, barIndex in pairs(SingularityDB.staticSortOrder) do
+    if p[barIndex] and (not SingularityDB.hiddenBars[barIndex]) and (not (barIndex == "cast" and SingularityDB.hiddenBars["cast"])) then
+      if not (barIndex ~= "cast" and not IsPlayerSpell(barIndex)) then
+        setupBar(p[barIndex], p, n)
+        n = n + 1
       end
-
-      Singularity_updateBars()
-      return
     end
+  end
+
+  for k, frame in pairs(p) do
+    if type(frame) ~= "userdata" then
+      local test = true
+      for i, j in pairs(SingularityDB.staticSortOrder) do
+        if j == k then
+          test = false
+          break
+        end
+      end
+      if test and (not SingularityDB.hiddenBars[k]) and ((SingularityDB.hiddenBars["cast"] == false and k == "cast") or IsPlayerSpell(k)) then
+        setupBar(frame, p, n)
+        n = n + 1
+      end
+      if SingularityDB.hiddenBars[k] or (k ~= "cast" and not IsPlayerSpell(k)) then
+        frame:Hide()
+      else
+        frame:Show()
+      end
+    end
+  end
+
+  local w, h = unpack(SingularityDB.barSize)
+
+  p:SetHeight((h + SingularityDB.barGap) * n + 1)
+
+  setupBar(Singularity.bars.gcd, Singularity.bars.static, 0)
+
+  Singularity.bars.gcd.tex:SetVertexColor(unpack(SingularityDB.gcdBarColor))
+  Singularity.bars.gcd.tex:SetPoint("TOPLEFT", Singularity.bars.gcd, "TOPLEFT")
+  Singularity.bars.gcd.tex:SetHeight(Singularity.bars.static:GetHeight() - 2)
+  Singularity.bars.gcd:SetFrameStrata("HIGH")
+
+  local _, _, icon = GetSpellInfo(15407)
+  Singularity.bars.static.cast.icon.tex:SetTexture(icon)
+
+  for k, v in pairs(Singularity.bars.dynamic) do
+    if type(v) == "table" then
+      v:SetWidth(SingularityDB.dynBarSize[1] + SingularityDB.dynIconSize[1] + 2 + 1)
+      local n = 0
+      for spellID, frame in pairs(v) do
+        if type(frame) == "table" then
+          if frame.tex then
+            setupBar(frame, v, n)
+            frame.tex:SetSize(unpack(SingularityDB.dynBarSize))
+            frame.icon:SetSize(SingularityDB.dynBarSize[2], SingularityDB.dynBarSize[2])
+            frame.icon.tex:SetTexCoord(unpack(SingularityDB.dynTexCoords))
+            n = n + 1
+          end
+            frame:SetSize(unpack(SingularityDB.dynBarSize))
+        end
+      end
+    end
+  end
+
+  reorderBars()
+  updateStackTexts()
+
+  if SingularityDB.hideOOC and not UnitAffectingCombat("player") then
+    Singularity:Hide()
+    Singularity.bars.static:Hide()
+    Singularity.bars.dynamic:Hide()
+  else
+    Singularity:Show()
+    Singularity.bars.static:Show()
+    Singularity.bars.dynamic:Show()
   end
 end
 
 
-f = CreateFrame("Frame")
-f.dt = 0
-f:RegisterEvent("ADDON_LOADED")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:SetScript("OnEvent", processEvents)
+
+
+Singularity = CreateFrame("frame", "Singularity", UIParent)
+function Singularity.loadSettings()
+  loadSettings()
+end
+
+Singularity:RegisterEvent("ADDON_LOADED")
+Singularity:SetScript("OnEvent", function(self, event, addon)
+  if addon == "Singularity" then
+    Singularity:UnregisterEvent("ADDON_LOADED")
+    SingularityDB = SingularityDB or {}
+    for k, v in pairs(cfg) do
+      if type(SingularityDB[k]) == "nil" then
+        SingularityDB[k] = v
+      end
+    end
+
+    -- SingularityDB = cfg
+
+    createFrames()
+
+    Singularity:SetScript("OnUpdate", function()
+      Singularity:SetScript("OnUpdate", nil)
+      loadSettings()
+    end)
+  end
+end)

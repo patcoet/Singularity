@@ -1,8 +1,9 @@
 local sm = LibStub("LibSharedMedia-3.0")
 sm:Register("border", "Solid", "Interface\\AddOns\\Singularity\\SolidBorder")
 sm:Register("font", "Marke Eigenbau", "Interface\\AddOns\\Singularity\\Marken.ttf")
+sm:Register("statusbar", "Singularity Flat", "Interface\\AddOns\\Singularity\\Singularity_flat")
 
-local function getHandle(type, path)
+function getHandle(type, path)
   local table = sm:HashTable(type)
   for k, v in pairs(table) do
     if v == path then
@@ -11,746 +12,94 @@ local function getHandle(type, path)
   end
 end
 
-local anchorPoints = {
-  ["TOPLEFT"] = "Top left",
-  ["TOP"] = "Top",
-  ["TOPRIGHT"] = "Top right",
-  ["RIGHT"] = "Right",
-  ["BOTTOMRIGHT"] = "Bottom right",
-  ["BOTTOM"] = "Bottom",
-  ["BOTTOMLEFT"] = "Bottom left",
-  ["LEFT"] = "Left",
-  ["CENTER"] = "Center",
-}
-
 local options = {
   type = "group",
   args = {
-    generalOptionsGroup = {
+    general = {
       name = "General options",
       type = "group",
       order = 0,
       args = {
-        alwaysShowOrbText = {
-          name = "Display Shadow Orbs stacks at 0",
-          type = "toggle",
-          width = "double",
-          order = 1,
-          get = function() return SingularityDB.alwaysShowOrbsText end,
-          set = function()
-            SingularityDB.alwaysShowOrbsText = not SingularityDB.alwaysShowOrbsText
-            Singularity_updateOrbsText()
-          end,
-        },
-        alwaysShowSpikeText = {
-          name = "Display Glyph of Mind Spike stacks at 0",
-          type = "toggle",
-          width = "double",
-          order = 1,
-          get = function() return SingularityDB.alwaysShowSpikeText end,
-          set = function()
-            SingularityDB.alwaysShowSpikeText = not SingularityDB.alwaysShowSpikeText
-            Singularity_updateSpikeText()
-          end,
-        },
-        alwaysShowSurgeText = {
-          name = "Display Surge of Darkness stacks at 0",
-          type = "toggle",
-          width = "double",
-          order = 1,
-          get = function() return SingularityDB.alwaysShowSurgeText end,
-          set = function()
-            SingularityDB.alwaysShowSurgeText = not SingularityDB.alwaysShowSurgeText
-            Singularity_updateSurgeText()
-          end,
-        },
-        hideShadowfriend = {
-          name = "Hide Shadowfriend bar",
-          type = "toggle",
-          get = function()
-            for k, v in pairs(SingularityDB.hiddenSpells) do
-              if k == "Shadowfiend" then
-                return true
-              end
-            end
-            return false
-          end,
-          set = function(i, hiding)
-            if hiding then
-              SingularityDB.hiddenSpells["Shadowfiend"] = ""
-            else
-              SingularityDB.hiddenSpells["Shadowfiend"] = nil
-            end
-            Singularity_updateBars()
-          end,
-        },
-        hideSWP = {
-          name = "Hide Shadow Word: Pain bar",
-          type = "toggle",
-          width = "double",
-          get = function()
-            for k, v in pairs(SingularityDB.hiddenSpells) do
-              if k == "Shadow Word: Pain" then
-                return true
-              end
-            end
-            return false
-          end,
-          set = function(i, hiding)
-            if hiding then
-              SingularityDB.hiddenSpells["Shadow Word: Pain"] = ""
-            else
-              SingularityDB.hiddenSpells["Shadow Word: Pain"] = nil
-            end
-            Singularity_updateBars()
-          end,
-        },
-        hideVT = {
-          name = "Hide Vampiric Touch bar",
-          type = "toggle",
-          width = "double",
-          get = function()
-            for k, v in pairs(SingularityDB.hiddenSpells) do
-              if k == "Vampiric Touch" then
-                return true
-              end
-            end
-            return false
-          end,
-          set = function(i, hiding)
-            if hiding then
-              SingularityDB.hiddenSpells["Vampiric Touch"] = ""
-            else
-              SingularityDB.hiddenSpells["Vampiric Touch"] = nil
-            end
-            Singularity_updateBars()
-          end,
-        },
-        hideMF = {
-          name = "Hide Mind Flay bar",
-          type = "toggle",
-          width = "double",
-          get = function()
-            for k, v in pairs(SingularityDB.hiddenSpells) do
-              if k == "Mind Flay" then
-                return true
-              end
-            end
-            return false
-          end,
-          set = function(i, hiding)
-            if hiding then
-              SingularityDB.hiddenSpells["Mind Flay"] = ""
-              SingularityDB.hiddenSpells["Mind Sear"] = ""
-              SingularityDB.hiddenSpells["Insanity"] = ""
-            else
-              SingularityDB.hiddenSpells["Mind Flay"] = nil
-              SingularityDB.hiddenSpells["Mind Sear"] = nil
-              SingularityDB.hiddenSpells["Insanity"] = nil
-            end
-            Singularity_updateBars()
-          end,
-        },
-        hideWithNoTarget = {
-          name = "Hide Singularity with no enemy target",
-          type = "toggle",
-          width = "double",
-          order = 1,
-          get = function() return SingularityDB.hideWithNoTarget end,
-          set = function()
-            SingularityDB.hideWithNoTarget = not SingularityDB.hideWithNoTarget
-            if SingularityDB.hideWithNoTarget and not UnitExists("target") then
-              Singularity:Hide()
-            else
-              Singularity:Show()
-            end
-          end,
-        },
-        barMaxTime = {
-          name = "Common maximum bar time",
-          desc = "(Seconds)",
-          type = "range",
-          width = "double",
-          order = -1,
-          min = 1,
-          max = 30,
-          softMin = 4,
-          softMax = 14,
-          get = function() return SingularityDB.bar.maxTime end,
-          set = function(i, value) SingularityDB.bar.maxTime = value end,
-        },
-        updateInterval = {
-          name = "Range display update interval (seconds)",
+        staticParent = {
+          name = "Parent frame",
           type = "input",
-          width = "double",
-          order = -1,
-          get = function() return tostring(SingularityDB.updateInterval) end,
+          get = function()
+            return tostring(SingularityDB.staticParent)
+          end,
           set = function(i, value)
-            SingularityDB.updateInterval = value + 0
+            SingularityDB.staticParent = value
+            Singularity.loadSettings()
           end,
         },
-      },
-    },
-    barContainerGroup = {
-      name = "Bar container",
-      type = "group",
-      inline = false,
-      args = {
-        barContainerTextureGroup = {
-          name = "Textures",
-          type = "group",
-          inline = false,
-          args = {
-            barContainerBackdropTexture = {
-              name = "Backdrop texture",
-              type = "select",
-              order = 1,
-              values = AceGUIWidgetLSMlists.background,
-              dialogControl = "LSM30_Background",
-              get = function() return getHandle("background", SingularityDB.targetContainer.backdrop.bgFile) end,
-              set = function(i, key)
-                SingularityDB.targetContainer.backdrop.bgFile = sm:Fetch("background", key)
-                Singularity_updateBars()
-              end,
-            },
-            barContainerBackdropColor = {
-              name = "Backdrop color",
-              type = "color",
-              order = 0,
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.targetContainer.backdrop.color
-                return cfg.r, cfg.g, cfg.b, cfg.a
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.targetContainer.backdrop.color
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barContainerBorderColor = {
-              name = "Border color",
-              type = "color",
-              order = 2,
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.targetContainer.backdrop.borderColor
-                return cfg.r, cfg.g, cfg.b
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.targetContainer.backdrop.borderColor
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barContainerEdgeTexture = {
-              name = "Border texture",
-              type = "select",
-              order = 3,
-              values = AceGUIWidgetLSMlists.border,
-              dialogControl = "LSM30_Border",
-              get = function() return getHandle("border", SingularityDB.targetContainer.backdrop.edgeFile) end,
-              set = function(i, key)
-                SingularityDB.targetContainer.backdrop.edgeFile = sm:Fetch("border", key)
-                Singularity_updateBars()
-              end,
-            },
-            barContainerEdgeSize = {
-              name = "Edge size",
-              type = "range",
-              width = "double",
-              order = 4,
-              min = 0,
-              softMin = 1,
-              softMax = 16,
-              max = 100,
-              get = function() return SingularityDB.targetContainer.backdrop.edgeSize end,
-              set = function(i, value)
-                SingularityDB.targetContainer.backdrop.edgeSize = value
-                Singularity_updateBars()
-              end,
-            },
-            barContainerShouldTile = {
-              name = "Tile",
-              type = "toggle",
-              order = 6,
-              get = function() return SingularityDB.targetContainer.backdrop.tile end,
-              set = function()
-                local cfg = SingularityDB.targetContainer.backdrop
-                cfg.tile = not cfg.tile
-                Singularity_updateBars()
-              end,
-            },
-            barContainerTileSize = {
-              name = "Tile size",
-              type = "input",
-              order = 5,
-              get = function() return tostring(SingularityDB.targetContainer.backdrop.tileSize) end,
-              set = function(i, value)
-                SingularityDB.targetContainer.backdrop.tileSize = value
-                Singularity_updateBars()
-              end,
-            },
-            barContainerInsetGroup = {
-              name = "Border insets",
-              type = "group",
-              order = -1,
-              inline = true,
-              args = {
-                barContainerInsetLeft = {
-                  order = 102,
-                  name = "Left",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.left) end,
-                  set = function(i, value)
-                    SingularityDB.targetContainer.backdrop.insets.left = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barContainerInsetRight = {
-                  order = 102,
-                  name = "Right",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.right) end,
-                  set = function(i, value)
-                    SingularityDB.targetContainer.backdrop.insets.right = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barContainerInsetTop = {
-                  order = 102,
-                  name = "Top",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.top) end,
-                  set = function(i, value)
-                    SingularityDB.targetContainer.backdrop.insets.top = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barContainerInsetBottom = {
-                  order = 102,
-                  name = "Bottom",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.targetContainer.backdrop.insets.bottom) end,
-                  set = function(i, value)
-                    SingularityDB.targetContainer.backdrop.insets.bottom = value
-                    Singularity_updateBars()
-                  end,
-                },
-              },
-            },
-          },
+        toggleHideOOC = {
+          name = "Hide out of combat",
+          type = "toggle",
+          width = "double",
+          order = 6,
+          get = function() return SingularityDB.hideOOC end,
+          set = function()
+            SingularityDB.hideOOC = not SingularityDB.hideOOC
+            Singularity.loadSettings()
+          end,
         },
-        barContainerAnchorGroup = {
-          name = "Anchor",
+        toggleShowCastBar = {
+          name = "Show cast bar",
+          type = "toggle",
+          width = "double",
+          order = 6,
+          get = function() return not SingularityDB.hiddenBars["cast"] end,
+          set = function()
+            SingularityDB.hiddenBars["cast"] = not SingularityDB.hiddenBars["cast"]
+            Singularity.loadSettings()
+          end,
+        },
+        toggleShowShadowfriendBar = {
+          name = "Show Shadowfriend bar",
+          type = "toggle",
+          width = "double",
+          order = 6,
+          get = function() return not SingularityDB.hiddenBars[34433] end,
+          set = function()
+            SingularityDB.hiddenBars[34433] = not SingularityDB.hiddenBars[34433]
+            Singularity.loadSettings()
+          end,
+        },
+        toggleDoTs = {
+          name = "Show DoT bars",
+          type = "toggle",
+          width = "double",
+          order = 6,
+          get = function() return SingularityDB.showDoTBars end,
+          set = function()
+            SingularityDB.showDoTBars = not SingularityDB.showDoTBars
+            Singularity.loadSettings()
+          end,
+        },
+        fontGroup = {
           type = "group",
+          name = "Font options",
           inline = true,
           args = {
-            barContainerParentFrame = {
-              name = "Parent frame",
-              type = "input",
-              order = 0,
-              get = function() return SingularityDB.targetContainer.parentFrame end,
-              set = function(i, value)
-                SingularityDB.targetContainer.parentFrame = value
-                Singularity_updateBars()
-              end,
-            },
-            barContainerAnchorFrom = {
-              name = "Anchor from",
-              type = "select",
-              values = anchorPoints,
-              get = function() return SingularityDB.targetContainer.anchorFrom end,
-              set = function(i, key)
-                SingularityDB.targetContainer.anchorFrom = key
-                Singularity_updateBars()
-              end,
-            },
-            barContainerAnchorFrame = {
-              name = "Anchor frame",
-              type = "input",
-              order = 0,
-              get = function() return SingularityDB.targetContainer.anchorFrame end,
-              set = function(i, value)
-                SingularityDB.targetContainer.anchorFrame = value
-                Singularity_updateBars()
-              end,
-            },
-            barContainerAnchorTo = {
-              name = "Anchor to",
-              type = "select",
-              values = anchorPoints,
-              get = function() return SingularityDB.targetContainer.anchorTo end,
-              set = function(i, key)
-                SingularityDB.targetContainer.anchorTo = key
-                Singularity_updateBars()
-              end,
-            },
-            barContainerXOffset = {
-              name = "X offset",
-              type = "input",
-              get = function() return tostring(SingularityDB.targetContainer.xOffset) end,
-              set = function(i, value)
-                SingularityDB.targetContainer.xOffset = value
-                Singularity_updateBars()
-              end,
-            },
-            barContainerYOffset = {
-              name = "Y offset",
-              type = "input",
-              get = function() return tostring(SingularityDB.targetContainer.yOffset) end,
-              set = function(i, value)
-                SingularityDB.targetContainer.yOffset = value
-                Singularity_updateBars()
-              end,
-            },
-          },
-        },
-      },
-    },
-    timerBarGroup = {
-      name = "Timer bars",
-      type = "group",
-      inline = false,
-      args = {
-        barHeight = {
-          name = "Height",
-          type = "input",
-          order = 1,
-          get = function() return tostring(SingularityDB.bar.height) end,
-          set = function(i, value)
-            SingularityDB.bar.height = value
-            Singularity_updateBars()
-          end,
-        },
-        barSpacing = {
-          name = "Inner spacing",
-          desc = "Vertical spacing between individual bars",
-          type = "input",
-          get = function() return tostring(SingularityDB.bar.spacing) end,
-          set = function(i, value)
-            SingularityDB.bar.spacing = value
-            Singularity_updateBars()
-          end,
-        },
-        barContainerSpacing = {
-          name = "Outer spacing",
-          desc = "Spacing between bar container edges and timer bars",
-          type = "input",
-          get = function() return tostring(SingularityDB.targetContainer.spacing) end,
-          set = function(i, value)
-            SingularityDB.targetContainer.spacing = value
-            Singularity_updateBars()
-          end,
-        },
-        barWidth = {
-          name = "Width",
-          type = "input",
-          order = 0,
-          get = function() return tostring(SingularityDB.bar.width) end,
-          set = function(i, value)
-            SingularityDB.bar.width = value
-            Singularity_updateBars()
-          end,
-        },
-        barTextureInset = {
-          name = "Texture spacing",
-          desc = "Spacing between bar texture and border",
-          type = "input",
-          get = function() return tostring(SingularityDB.bar.texture.inset) end,
-          set = function(i, value)
-            SingularityDB.bar.texture.inset = value
-            Singularity_updateBars()
-          end,
-        },
-        barColorsGroup = {
-          name = "Bar colors",
-          type = "group",
-          order = 0,
-          inline = true,
-          args = {
-            gcdBarColor = {
-              name = "GCD color",
-              desc = "Color used to display the global cooldown",
-              type = "color",
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.gcdColor
-                return cfg.r, cfg.g, cfg.b, cfg.a
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.gcdColor
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barTextureNormalColor = {
-              name = "Normal color",
-              type = "color",
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.bar.texture.color
-                return cfg.r, cfg.g, cfg.b, cfg. a
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.bar.texture.color
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barTextureAlertColor = {
-              name = "Alert color",
-              desc = "Color used when DoTs are safe to refresh",
-              type = "color",
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.bar.texture.alert
-                return cfg.r, cfg.g, cfg.b, cfg. a
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.bar.texture.alert
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-          },
-        },
-        barBackdropGroup = {
-          name = "Textures",
-          type = "group",
-          inline = false,
-          args = {
-            barBackdropTexture = {
-              name = "Backdrop texture",
-              type = "select",
-              order = 1,
-              values = AceGUIWidgetLSMlists.background,
-              dialogControl = "LSM30_Background",
-              get = function() return getHandle("background", SingularityDB.bar.backdrop.bgFile) end,
-              set = function(i, key)
-                SingularityDB.bar.backdrop.bgFile = sm:Fetch("background", key)
-                Singularity_updateBars()
-              end,
-            },
-            barBackdropColor = {
-              name = "Backdrop color",
-              type = "color",
-              order = 0,
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.bar.backdrop.color
-                return cfg.r, cfg.g, cfg.b, cfg.a
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.bar.backdrop.color
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barBorderColor = {
-              name = "Border color",
-              type = "color",
-              order = 2,
-              hasAlpha = true,
-              get = function()
-                local cfg = SingularityDB.bar.backdrop.borderColor
-                return cfg.r, cfg.g, cfg.b
-              end,
-              set = function(i, r, g, b, a)
-                local cfg = SingularityDB.bar.backdrop.borderColor
-                cfg.r = r
-                cfg.g = g
-                cfg.b = b
-                cfg.a = a
-                Singularity_updateBars()
-              end,
-            },
-            barEdgeTexture = {
-              name = "Border texture",
-              type = "select",
-              order = 3,
-              values = AceGUIWidgetLSMlists.border,
-              dialogControl = "LSM30_Border",
-              get = function() return getHandle("border", SingularityDB.bar.backdrop.edgeFile) end,
-              set = function(i, key)
-                SingularityDB.bar.backdrop.edgeFile = sm:Fetch("border", key)
-                Singularity_updateBars()
-              end,
-            },
-            barEdgeSize = {
-              name = "Edge size",
-              type = "range",
-              order = 4,
-              width = "double",
-              min = 0,
-              softMin = 1,
-              softMax = 16,
-              max = 100,
-              get = function() return SingularityDB.bar.backdrop.edgeSize end,
-              set = function(i, value)
-                SingularityDB.bar.backdrop.edgeSize = value
-                Singularity_updateBars()
-              end,
-            },
-            barShouldTile = {
-              name = "Tile",
-              type = "toggle",
-              order = 6,
-              get = function() return SingularityDB.bar.backdrop.tile end,
-              set = function()
-                local cfg = SingularityDB.bar.backdrop
-                cfg.tile = not cfg.tile
-                Singularity_updateBars()
-              end,
-            },
-            barTileSize = {
-              name = "Tile size",
-              type = "input",
-              order = 5,
-              get = function() return tostring(SingularityDB.bar.backdrop.tileSize) end,
-              set = function(i, value)
-                SingularityDB.bar.backdrop.tileSize = value
-                Singularity_updateBars()
-              end,
-            },
-            barInsetGroup = {
-              name = "Border insets",
-              type = "group",
-              inline = true,
-              args = {
-                barInsetLeft = {
-                  order = 102,
-                  name = "Left",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.bar.backdrop.insets.left) end,
-                  set = function(i, value)
-                    SingularityDB.bar.backdrop.insets.left = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barInsetRight = {
-                  order = 102,
-                  name = "Right",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.bar.backdrop.insets.right) end,
-                  set = function(i, value)
-                    SingularityDB.bar.backdrop.insets.right = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barInsetTop = {
-                  order = 102,
-                  name = "Top",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.bar.backdrop.insets.top) end,
-                  set = function(i, value)
-                    SingularityDB.bar.backdrop.insets.top = value
-                    Singularity_updateBars()
-                  end,
-                },
-                barInsetBottom = {
-                  order = 102,
-                  name = "Bottom",
-                  type = "input",
-                  get = function() return tostring(SingularityDB.bar.backdrop.insets.bottom) end,
-                  set = function(i, value)
-                    SingularityDB.bar.backdrop.insets.bottom = value
-                    Singularity_updateBars()
-                  end,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    iconGroup = {
-      name = "Spell icons",
-      type = "group",
-      inline = false,
-      args = {
-        iconTextGroup = {
-          name = "Icon text",
-          type = "group",
-          inline = true,
-          order = 0,
-          args = {
-            iconTextAnchorFrom = {
-              name = "Anchor from",
-              type = "select",
-              values = anchorPoints,
-              get = function() return SingularityDB.bar.text.anchorFrom end,
-              set = function(i, key)
-                SingularityDB.bar.text.anchorFrom = key
-                Singularity_updateFonts()
-              end,
-            },
-            iconTextAnchorTo = {
-              name = "Anchor to",
-              type = "select",
-              values = anchorPoints,
-              get = function() return SingularityDB.bar.text.anchorTo end,
-              set = function(i, key)
-                SingularityDB.bar.text.anchorTo = key
-                Singularity_updateFonts()
-              end,
-            },
-            iconTextXOffset = {
-              name = "X offset",
-              type = "input",
-              get = function() return tostring(SingularityDB.bar.text.xOffset) end,
-              set = function(i, value)
-                SingularityDB.bar.text.xOffset = value
-                Singularity_updateFonts()
-              end,
-            },
-            iconTextYOffset = {
-              name = "Y offset",
-              type = "input",
-              get = function() return tostring(SingularityDB.bar.text.yOffset) end,
-              set = function(i, value)
-                SingularityDB.bar.text.yOffset = value
-                Singularity_updateFonts()
-              end,
-            },
-            iconTextFont = {
+            font = {
               name = "Font",
               type = "select",
               order = 0,
               values = AceGUIWidgetLSMlists.font,
               dialogControl = "LSM30_Font",
-              get = function() return getHandle("font", SingularityDB.bar.text.fontPath) end,
+              get = function() return getHandle("font", SingularityDB.font[1]) end,
               set = function(i, key)
-                SingularityDB.bar.text.fontPath = sm:Fetch("font", key)
-                Singularity_updateFonts()
+                SingularityDB.font[1] = sm:Fetch("font", key)
+                Singularity.loadSettings()
               end,
             },
             iconTextFontSize = {
               name = "Size",
               type = "input",
               order = 1,
-              get = function() return tostring(SingularityDB.bar.text.fontSize) end,
+              get = function() return tostring(SingularityDB.font[2]) end,
               set = function(i, value)
-                SingularityDB.bar.text.fontSize = value
-                Singularity_updateFonts()
+                SingularityDB.font[2] = value
+                Singularity.loadSettings()
               end,
             },
             iconTextFontFlags = {
@@ -763,11 +112,11 @@ local options = {
                 ["MONOCHROME"] = "Monochrome",
               },
               get = function(s, key, value)
-                local s = SingularityDB.bar.text.fontFlags
+                local s = SingularityDB.font[3]
                 return s:find(key) and true or false
               end,
               set = function(s, flag, enable)
-                local s = SingularityDB.bar.text.fontFlags
+                local s = SingularityDB.font[3]
                 local isMonochrome = s:find("MONOCHROME") ~= nil
                 if flag ~= "MONOCHROME" then
                   s = enable and flag or ""
@@ -777,93 +126,425 @@ local options = {
                 else
                   s = enable and s .. flag or s:gsub(flag, "")
                 end
-                SingularityDB.bar.text.fontFlags = s
-                Singularity_updateFonts()
+                SingularityDB.font[3] = s
+                Singularity.loadSettings()
               end,
             },
           },
         },
-        iconSizeGroup = {
-          name = "Icon size",
-          type = "group",
-          inline = true,
-          args = {
-            iconAnchorXOffset = {
-              name = "X offset",
-              type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.xOffset) end,
-              set = function(i, value)
-                SingularityDB.bar.icon.xOffset = value
-                Singularity_updateBars()
-              end,
-            },
-            iconHeight = {
-              name = "Height",
-              type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.height) end,
-              set = function(i, value)
-                SingularityDB.bar.icon.height = value
-                Singularity_updateBars()
-              end,
-            },
-            iconWidth = {
-              name = "Width",
-              type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.width) end,
-              set = function(i, value)
-                SingularityDB.bar.icon.width = value
-                Singularity_updateBars()
-              end,
-            },
-          },
+        barColor = {
+          name = "Bar color",
+          type = "color",
+          order = 5,
+          hasAlpha = true,
+          get = function()
+            return unpack(SingularityDB.barColor)
+            end,
+          set = function(i, r, g, b, a)
+            SingularityDB.barColor = {r, g, b, a}
+            Singularity.loadSettings()
+            end,
         },
-        iconCoordsGroup = {
-          name = "Coords",
-          type = "group",
+        barMaxTime = {
+          name = "Common maximum bar time",
+          desc = "(Seconds)",
+          type = "range",
+          width = "double",
           order = -1,
+          min = 1,
+          max = 30,
+          softMin = 4,
+          softMax = 14,
+          get = function() return SingularityDB.barMaxTime end,
+          set = function(i, value) SingularityDB.barMaxTime = value end,
+        },
+        barTexture = {
+          name = "Bar texture",
+          type = "select",
+          order = 1,
+          width = "double",
+          values = AceGUIWidgetLSMlists.statusbar,
+          dialogControl = "LSM30_Statusbar",
+          get = function()
+            return getHandle("statusbar", SingularityDB.barTexture) end,
+          set = function(i, key)
+            SingularityDB.barTexture = sm:Fetch("statusbar", key)
+            Singularity.loadSettings()
+          end,
+        },
+        barWidth = {
+          name = "Bar width",
+          type = "input",
+          order = 5,
+          get = function()
+            return tostring(SingularityDB.barSize[1] + SingularityDB.iconSize[1])
+          end,
+          set = function(i, value)
+            SingularityDB.barSize[1] = value - SingularityDB.iconSize[1]
+            Singularity.loadSettings()
+          end,
+        },
+        SingularityAnchorGroup = {
+          name = "Anchor",
+          type = "group",
+          args = {
+            -- Currently broken because of how Singularity.static positioning/sizing is done
+            -- anchorFrom = {
+            --   name = "Anchor from",
+            --   type = "input",
+            --   get = function()
+            --     return tostring(SingularityDB.SingularityPoint[1])
+            --   end,
+            --   set = function(i, value)
+            --     SingularityDB.SingularityPoint[1] = value
+            --     Singularity.loadSettings()
+            --   end,
+            -- },
+            anchorFrame = {
+              name = "Anchor frame",
+              type = "input",
+              get = function()
+                -- local frame = SingularityDB.SingularityPoint[2]
+                return tostring(SingularityDB.SingularityPoint[2])
+              end,
+              set = function(i, value)
+                SingularityDB.SingularityPoint[2] = value
+                Singularity.loadSettings()
+              end,
+            },
+            -- anchorTo = {
+            --   name = "Anchor to",
+            --   type = "input",
+            --   get = function()
+            --     return tostring(SingularityDB.SingularityPoint[3])
+            --   end,
+            --   set = function(i, value)
+            --     SingularityDB.SingularityPoint[3] = value
+            --     Singularity.loadSettings()
+            --   end,
+            -- },
+            anchorX = {
+              name = "Horizontal offset",
+              type = "input",
+              get = function() return tostring(SingularityDB.SingularityPoint[4]) end,
+              set = function(i, value)
+                SingularityDB.SingularityPoint[4] = value
+                Singularity.loadSettings()
+              end,
+            },
+            anchorY = {
+              name = "Vertical offset",
+              type = "input",
+              get = function() return tostring(SingularityDB.SingularityPoint[5]) end,
+              set = function(i, value)
+                SingularityDB.SingularityPoint[5] = value
+                Singularity.loadSettings()
+              end,
+            },
+          },
+        },
+        backdropGroup = {
+          name = "Textures",
+          type = "group",
           inline = false,
           args = {
-            iconCoordLeft = {
+            backdropTexture = {
+              name = "Backdrop texture",
+              type = "select",
+              order = 1,
+              values = AceGUIWidgetLSMlists.background,
+              dialogControl = "LSM30_Background",
+              get = function() return getHandle("background", SingularityDB.backdrop.bgFile) end,
+              set = function(i, value)
+                SingularityDB.backdrop.bgFile = sm:Fetch("background", value)
+                Singularity.loadSettings()
+              end,
+            },
+            backdropColor = {
+              name = "Backdrop color",
+              type = "color",
+              order = 0,
+              hasAlpha = true,
+              get = function()
+                local c = SingularityDB.backdrop.color
+                return SingularityDB.r, SingularityDB.g, SingularityDB.b, SingularityDB.a
+              end,
+              set = function(i, r, g, b, a)
+                local c = SingularityDB.backdrop.color
+                SingularityDB.r = r
+                SingularityDB.g = g
+                SingularityDB.b = b
+                SingularityDB.a = a
+                Singularity.loadSettings()
+              end,
+            },
+            borderColor = {
+              name = "Border color",
+              type = "color",
+              order = 2,
+              hasAlpha = true,
+              get = function()
+                local c = SingularityDB.backdrop.borderColor
+                return SingularityDB.r, SingularityDB.g, SingularityDB.b, SingularityDB.a
+              end,
+              set = function(i, r, g, b, a)
+                local c = SingularityDB.backdrop.borderColor
+                SingularityDB.r = r
+                SingularityDB.g = g
+                SingularityDB.b = b
+                SingularityDB.a = a
+                Singularity.loadSettings()
+              end,
+            },
+            edgeTexture = {
+              name = "Border texture",
+              type = "select",
+              order = 3,
+              values = AceGUIWidgetLSMlists.border,
+              dialogControl = "LSM30_Border",
+              get = function() return getHandle("border", SingularityDB.backdrop.edgeFile) end,
+              set = function(i, value)
+                SingularityDB.backdrop.edgeFile = sm:Fetch("border", value)
+                Singularity.loadSettings()
+              end,
+            },
+            edgeSize = {
+              name = "Edge size",
+              type = "range",
+              width = "double",
+              order = 4,
+              min = 0,
+              softMin = 1,
+              softMax = 16,
+              max = 100,
+              get = function() return SingularityDB.backdrop.edgeSize end,
+              set = function(i, value)
+                SingularityDB.backdrop.edgeSize = value
+                Singularity.loadSettings()
+              end,
+            },
+            shouldTile = {
+              name = "Tile",
+              type = "toggle",
+              order = 6,
+              get = function() return SingularityDB.backdrop.tile end,
+              set = function()
+                SingularityDB.backdrop.tile = not SingularityDB.backdrop.tile
+                Singularity.loadSettings()
+              end,
+            },
+            tileSize = {
+              name = "Tile size",
+              type = "input",
+              order = 5,
+              get = function() return tostring(SingularityDB.backdrop.tileSize) end,
+              set = function(i, value)
+                SingularityDB.backdrop.tileSize = value
+                Singularity.loadSettings()
+              end,
+            },
+            insetGroup = {
+              name = "Border insets",
+              type = "group",
+              order = -1,
+              inline = true,
+              args = {
+                insetLeft = {
+                  order = 102,
+                  name = "Left",
+                  type = "input",
+                  get = function() return tostring(SingularityDB.backdrop.insets.left) end,
+                  set = function(i, value)
+                    SingularityDB.backdrop.insets.left = value
+                    Singularity.loadSettings()
+                  end,
+                },
+                insetRight = {
+                  order = 102,
+                  name = "Right",
+                  type = "input",
+                  get = function() return tostring(SingularityDB.backdrop.insets.right) end,
+                  set = function(i, value)
+                    SingularityDB.backdrop.insets.right = value
+                    Singularity.loadSettings()
+                  end,
+                },
+                insetTop = {
+                  order = 102,
+                  name = "Top",
+                  type = "input",
+                  get = function() return tostring(SingularityDB.backdrop.insets.top) end,
+                  set = function(i, value)
+                    SingularityDB.backdrop.insets.top = value
+                    Singularity.loadSettings()
+                  end,
+                },
+                insetBottom = {
+                  order = 102,
+                  name = "Bottom",
+                  type = "input",
+                  get = function() return tostring(SingularityDB.backdrop.insets.bottom) end,
+                  set = function(i, value)
+                    SingularityDB.backdrop.insets.bottom = value
+                    Singularity.loadSettings()
+                  end,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    staticBars = {
+      name = "Static bar options",
+      type = "group",
+      args = {
+        staticBarSize = {
+          name = "Static bar height",
+          type = "input",
+          get = function()
+            return tostring(SingularityDB.barSize[2])
+          end,
+          set = function(i, value)
+            SingularityDB.barSize[2] = value
+            SingularityDB.iconSize = {value, value}
+            Singularity.loadSettings()
+          end,
+        },
+        staticIconCoordsGroup = {
+          name = "Icon texture oords",
+          type = "group",
+          order = -1,
+          inline = true,
+          args = {
+            staticIconCoordLeft = {
               name = "Left",
               type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.coords.l) end,
+              get = function() return tostring(SingularityDB.dynTexCoords[1]) end,
               set = function(i, value)
-                SingularityDB.bar.icon.coords.l = value
-                Singularity_updateBars()
-                end,
+                SingularityDB.dynTexCoords[1] = value
+                Singularity.loadSettings()
+              end,
             },
-            iconCoordRight = {
+            staticIconCoordRight = {
               name = "Right",
               type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.coords.r) end,
+              get = function() return tostring(SingularityDB.dynTexCoords[2]) end,
               set = function(i, value)
-                SingularityDB.bar.icon.coords.r = value
-                Singularity_updateBars()
-                end,
+                SingularityDB.dynTexCoords[2] = value
+                Singularity.loadSettings()
+              end,
             },
-            iconCoordTop = {
+            staticIconCoordTop = {
               name = "Top",
               type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.coords.t) end,
+              get = function() return tostring(SingularityDB.dynTexCoords[3]) end,
               set = function(i, value)
-                SingularityDB.bar.icon.coords.t = value
-                Singularity_updateBars()
-                end,
+                SingularityDB.dynTexCoords[3] = value
+                Singularity.loadSettings()
+              end,
             },
-            iconCoordBottom = {
+            staticIconCoordBottom = {
               name = "Bottom",
               type = "input",
-              get = function() return tostring(SingularityDB.bar.icon.coords.b) end,
+              get = function() return tostring(SingularityDB.dynTexCoords[4]) end,
               set = function(i, value)
-                SingularityDB.bar.icon.coords.b = value
-                Singularity_updateBars()
-                end,
+                SingularityDB.dynTexCoords[4] = value
+                Singularity.loadSettings()
+              end,
+            },
+          },
+        },
+      },
+    },
+    dynamicBars = {
+      name = "Dynamic bar options",
+      type = "group",
+      args = {
+        barRefreshColor = {
+          name = "Refresh alert color",
+          type = "color",
+          hasAlpha = true,
+          get = function()
+            return unpack(SingularityDB.barRefreshColor)
+            end,
+          set = function(i, r, g, b, a)
+            SingularityDB.barRefreshColor = {r, g, b, a}
+            Singularity.loadSettings()
+            end,
+        },
+        dynamicBarSize = {
+          name = "Dynamic bar height",
+          width = "double",
+          type = "input",
+          get = function()
+            return tostring(SingularityDB.dynBarSize[2])
+          end,
+          set = function(i, value)
+            SingularityDB.dynBarSize[2] = value
+            SingularityDB.dynIconSize = {value, value}
+            Singularity.loadSettings()
+          end,
+        },
+        dynamicIconCoordsGroup = {
+          name = "Icon texture coords",
+          type = "group",
+          order = -1,
+          inline = true,
+          args = {
+            dynamicIconCoordLeft = {
+              name = "Left",
+              type = "input",
+              get = function() return tostring(SingularityDB.dynTexCoords[1]) end,
+              set = function(i, value)
+                SingularityDB.dynTexCoords[1] = value
+                Singularity.loadSettings()
+              end,
+            },
+            dynamicIconCoordRight = {
+              name = "Right",
+              type = "input",
+              get = function() return tostring(SingularityDB.dynTexCoords[2]) end,
+              set = function(i, value)
+                SingularityDB.dynTexCoords[2] = value
+                Singularity.loadSettings()
+              end,
+            },
+            dynamicIconCoordTop = {
+              name = "Top",
+              type = "input",
+              get = function() return tostring(SingularityDB.dynTexCoords[3]) end,
+              set = function(i, value)
+                SingularityDB.dynTexCoords[3] = value
+                Singularity.loadSettings()
+              end,
+            },
+            dynamicIconCoordBottom = {
+              name = "Bottom",
+              type = "input",
+              get = function() return tostring(SingularityDB.dynTexCoords[4]) end,
+              set = function(i, value)
+                SingularityDB.dynTexCoords[4] = value
+                Singularity.loadSettings()
+              end,
             },
           },
         },
       },
     },
   },
+}
+
+local anchorPoints = {
+  ["TOPLEFT"] = "Top left",
+  ["TOP"] = "Top",
+  ["TOPRIGHT"] = "Top right",
+  ["RIGHT"] = "Right",
+  ["BOTTOMRIGHT"] = "Bottom right",
+  ["BOTTOM"] = "Bottom",
+  ["BOTTOMLEFT"] = "Bottom left",
+  ["LEFT"] = "Left",
+  ["CENTER"] = "Center",
 }
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable("Singularity", options, nil)
