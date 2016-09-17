@@ -1,3 +1,34 @@
+-- Basic functionality:
+-- Add Insanity tracking (UNIT_POWER_FREQUENT, arg1 == "player", arg2 ==
+-- "INSANITY", where Orbs tracking was before)
+-- Insanity decay rate tracking? Time until 0? In bar form?
+-- Remove range tracking
+-- Remove tracking of things that are no longer in the game
+-- Add tracking of new things (Void Torrent, Void Bolt, Shadow Word: Void,
+-- Lingering Insanity?, Shadow Word: Death health threshold changing depending
+-- on talents, Void Ray + stack text, Shadow Crash, Mind Spike stacks)
+
+-- Later:
+-- Use StatusBar frames for easier updating (which I should've been doing from
+-- the start...)
+-- Redo the whole config thing, because there's no way creating all the options
+-- manually is the best way to do it
+-- Split OnEvent into different functions to make it less monolithic
+-- Basically just review all the code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local function toSet(t)
   local u = {}
   for _, v in ipairs(t) do
@@ -40,26 +71,33 @@ local cfg = {
   barSize = {200, 20},
   barTexture = "Interface\\AddOns\\Singularity\\Singularity_flat",
   baseDuration = {
-    [589] = 18, -- Shadow Word: Pain
-    [34914] = 15, -- Vampiric Touch
-    [155361] = 60, -- Void Entropy
+    [589] = 14, -- Shadow Word: Pain
+    [34914] = 18, -- Vampiric Touch
+    [217673] = 10, -- Mind Spike
   },
   buffs = {
-    139139, -- Insanity
-    162448, -- Surge of Darkness
+    124430, -- Shadowy Insight
+    205371, -- Void Ray
   },
   cooldowns = {
     8092, -- Mind Blast
     34433, -- Shadowfriend/Mindfriender
-    175702, -- Divine Burst (Cascade/Divine Star/Halo)
     10060, -- Power Infusion
+    205385, -- Shadow Crash
     32379, -- Shadow Word: Death
+    205448, -- Void Bolt
+    228260, -- Void Eruption
+    205065, -- Void Torrent
+    205351, -- Shadow Word: Void
   },
+  -- nonHiddenBars = {
+  --   205448, -- Void Bolt
+  -- },
   DeathBar = 32379, -- Shadow Word: Death
   dots = {
     589, -- Shadow Word: Pain
     34914, -- Vampiric Touch
-    155361, -- Void Entropy
+    217673, -- Mind Spike
   },
   dynIconSize = {12, 12},
   dynBarSize = {200, 12},
@@ -87,32 +125,31 @@ local cfg = {
   iconPoint = {"RIGHT", "LEFT", -1, 0},
   iconSize = {20, 20},
   links = {
+    [205448] = 228260, -- Void Eruption -> Void Bolt
     [123040] = 34433, -- Mindfriender
-    [120644] = 175702, -- Halo
-    [122121] = 175702, -- Divine Star
-    [127632] = 175702, -- Cascade
   },
   secondaryResourceBar = 8092, -- Mind Blast
-  rangeTextBar = 175702, -- Divine Burst
-  secondaryResource = SPELL_POWER_SHADOW_ORBS,
+  secondaryResourceBreakpoint = 70,
   showDoTBars = true,
   SingularityPoint = {"TOP", "UIParent", "CENTER", 0, -162},
   staticParent = "UIParent",
+  shouldReplaceIcon = {
+    [228260] = 205448, -- Void Eruption -> Void Bolt
+  },
   staticSortOrder = {
     "cast",
-    139139, -- Insanity
+    15407, -- Mind Flay
     8092, -- Mind Blast
     32379, -- Shadow Word: Death
-    162448, -- Surge of Darkness
-    175702, -- Divine Burst
     34433, -- Shadowfriend
+    205448, -- Void Bolt
   },
   texCoords = {0.1, 0.9, 0.1, 0.9},
   texts = {
-    [162448] = 162448 -- Surge of Darkness text on Surge of Darkness icon
   },
   trackedEvents = {
     "UNIT_AURA", -- buffs
+    "UNIT_POWER_FREQUENT", -- secondary resource
     "UNIT_SPELLCAST_START", -- casts
     "UNIT_SPELLCAST_CHANNEL_START", -- casts
     "UNIT_SPELLCAST_SENT", -- GCD
@@ -125,9 +162,6 @@ local cfg = {
     "UPDATE_MOUSEOVER_UNIT", -- dynamic reordering
     "PLAYER_FOCUS_CHANGED", -- dynamic reordering
     "PLAYER_TALENT_UPDATE", -- texts and settings
-    "GLYPH_ADDED", -- texts and settings
-    "GLYPH_REMOVED", -- texts and settings
-    "GLYPH_UPDATED", -- texts and settings
     "PLAYER_ENTERING_WORLD", -- texts and settings
     "PLAYER_DEAD", -- texts
     "PLAYER_REGEN_ENABLED", -- hide OOC
@@ -143,13 +177,12 @@ local cfg = {
     ["boss4"] = "b4",
     ["boss5"] = "b5",
   },
-  secondaryResourceBreakpoint = 3,
-  secondaryResourceAlertColor = {0, 1, 0, 1}
 }
 
 cfg.buffs = toSet(cfg.buffs)
 cfg.dots = toSet(cfg.dots)
 cfg.cooldowns = toSet(cfg.cooldowns)
+-- cfg.nonHiddenBars = toSet(cfg.nonHiddenBars)
 local haveMouseover = false
 
 local function updateBarTexts()
@@ -173,11 +206,7 @@ local function updateStackTexts()
   local currPow = UnitPower("player", SingularityDB.secondaryResource)
   local powBar = Singularity.bars.static[SingularityDB.secondaryResourceBar]
   powBar.icon.fs:SetText(currPow)
-  if currPow < SingularityDB.secondaryResourceBreakpoint then
-    powBar.icon.fs:SetTextColor(1, 1, 1, 1)
-  else
-    powBar.icon.fs:SetTextColor(unpack(SingularityDB.secondaryResourceAlertColor))
-  end
+
   for spellID in pairs(SingularityDB.buffs) do
     if IsPlayerSpell(spellID) and SingularityDB.texts[spellID] then
       Singularity.bars.static[SingularityDB.texts[spellID]].icon.fs:SetText("")
@@ -205,49 +234,6 @@ local function onUpdate(self, elapsed)
     end
   end
 
-  if rc == nil then
-    rc = LibStub("LibRangeCheck-2.0")
-  end
-
-  local minRange, maxRange = rc:GetRange("target")
-  if maxRange == nil then
-    return
-  end
-
-  Singularity.bars.static[SingularityDB.rangeTextBar].icon.fs:SetText(maxRange)
-  local r, g, b, a
-
-  if IsPlayerSpell(127632) then -- Cascade
-    if maxRange <= 30 then
-      r, g, b = 1, 1, 0
-    elseif maxRange <= 40 then
-      r, g, b = 0, 1, 0
-    else
-      r, g, b = 1, 0, 0
-    end
-  elseif IsPlayerSpell(122121) then -- Divine Star
-    if maxRange < 25 then
-      r, g, b = 0, 1, 0
-    elseif maxRange == 25 then
-      r, g, b = 1, 1, 0
-    else
-      r, g, b = 1, 0, 0
-    end
-  elseif IsPlayerSpell(120644) then -- Halo
-    if maxRange <= 15 then
-      r, g, b = 1, 0, 0
-    elseif minRange == 15 and maxRange == 20 then
-      r, g, b = 1, 1, 0
-    elseif minRange == 20 and maxRange == 25 then
-      r, g, b = 0, 1, 0
-    elseif minRange == 25 and maxRange == 30 then
-      r, g, b = 1, 1, 0
-    else
-      r, g, b = 1, 0, 0
-    end
-  end
-
-  Singularity.bars.static[SingularityDB.rangeTextBar].icon.fs:SetTextColor(r, g, b, 1)
 end
 
 local function createFrames()
@@ -268,7 +254,7 @@ local function createFrames()
   b.static.cast.icon = CreateFrame("frame", nil, b.static.cast)
   b.static.cast.icon.tex = b.static.cast.icon:CreateTexture()
   b.static.cast.icon.fs = b.static.cast.icon:CreateFontString()
-  b.dynamic:SetPoint("TOP", b.static, "BOTTOM", 0, -1) -- TODO
+  b.dynamic:SetPoint("TOP", b.static, "BOTTOM", 0, -1) -- TODO -- TODO: Figure out what I was supposed to do here
 
   for spellID in pairs(SingularityDB.cooldowns) do
     b.static[spellID] = CreateFrame("frame", nil, b.static)
@@ -308,7 +294,11 @@ local function setupBar(frame, parent, n)
   ff, ft, fx, fy = unpack(SingularityDB.fontPoint)
   frame.icon:SetSize(unpack(SingularityDB.iconSize))
   frame.icon:SetPoint(af, frame, at, ox, oy)
-  frame.icon.tex:SetTexture(icon)
+  if SingularityDB.shouldReplaceIcon[frame.spellID] then
+    frame.icon.tex:SetTexture(select(3, GetSpellInfo(SingularityDB.shouldReplaceIcon[frame.spellID])))
+  else
+    frame.icon.tex:SetTexture(icon)
+  end
   frame.icon.tex:SetTexCoord(unpack(SingularityDB.texCoords))
   frame.icon.tex:SetAllPoints()
   if frame.icon.fs then
@@ -385,7 +375,7 @@ local function eventHandler(self, event, ...)
     return
   end
 
-  if event == "PLAYER_TALENT_UPDATE" or event == "GLYPH_ADDED" or event == "GLYPH_REMOVED" or event == "GLYPH_UPDATED" or event == "PLAYER_ENTERING_WORLD" then
+  if event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
     Singularity.loadSettings()
     updateStackTexts()
     return
@@ -427,6 +417,14 @@ local function eventHandler(self, event, ...)
     reorderBars()
   end
 
+  if event == "UNIT_POWER_FREQUENT" then
+    local unit, powerType = ...
+
+    if unit == "player" and powerType == "INSANITY" then
+      updateStackTexts()
+    end
+  end
+
   if event == "COMBAT_LOG_EVENT_UNFILTERED" then -- Handle DoTs and Orbs
     local timestamp, subevent, _, srcGUID, _, _, _, tarGUID, tarName, _, _, spellID, _, _, _, powerType = ...
 
@@ -439,21 +437,6 @@ local function eventHandler(self, event, ...)
     end
 
     if not SingularityDB.showDoTBars then return end
-
-    -- Refresh Void Entropy timer with Devouring Plague
-    if IsPlayerSpell(155361) and subevent == "SPELL_CAST_SUCCESS" and IsPlayerSpell(2944) and spellID == 2944 then
-      for k, v in pairs(Singularity.bars.dynamic) do
-        if type(v) == "table" and v.GUID == tarGUID then
-          for _, unitID in pairs(SingularityDB.dynSortOrder) do
-            if UnitGUID(unitID) == tarGUID then
-              _, _, _, _, _, _, expires = UnitDebuff(unitID, GetSpellInfo(155361), "", "PLAYER")
-              v[155361].expires = expires
-              break
-            end
-          end
-        end
-      end
-    end
 
     if not SingularityDB.dots[spellID] then return end
 
@@ -527,8 +510,6 @@ local function eventHandler(self, event, ...)
       p.name = tarName:gsub("%S+%s", function(s) return s:sub(1,1) .. ". " end)
       p.GUID = tarGUID
 
-
-
       reorderBars()
 
       f.baseDuration = SingularityDB.baseDuration[spellID]
@@ -566,6 +547,19 @@ local function eventHandler(self, event, ...)
           if frame.GUID == tarGUID then
             local f = frame[spellID]
             f.expires = f.expires + min(f.baseDuration, f.baseDuration * 1.3 - f.timeLeft)
+            break
+          end
+        end
+      end
+      return
+    end
+
+    if subevent == "SPELL_AURA_APPLIED_DOSE" and spellID == 217673 then -- Mind Spike
+      for _, frame in pairs(Singularity.bars.dynamic) do
+        if type(frame) == "table" then
+          if frame.GUID == tarGUID then
+            local f = frame[spellID]
+            f.expires = GetTime() + 10
             break
           end
         end
@@ -810,7 +804,7 @@ local function loadSettings()
             frame.icon.tex:SetTexCoord(unpack(SingularityDB.dynTexCoords))
             n = n + 1
           end
-            frame:SetSize(unpack(SingularityDB.dynBarSize))
+          frame:SetSize(unpack(SingularityDB.dynBarSize))
         end
       end
     end
@@ -830,9 +824,6 @@ local function loadSettings()
   end
 end
 
-
-
-
 Singularity = CreateFrame("frame", "Singularity", UIParent)
 function Singularity.loadSettings()
   loadSettings()
@@ -849,7 +840,7 @@ Singularity:SetScript("OnEvent", function(self, event, addon)
       end
     end
 
-    -- SingularityDB = cfg
+    SingularityDB = cfg
 
     createFrames()
 
