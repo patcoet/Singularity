@@ -1,22 +1,17 @@
 -- Basic functionality:
--- Add Insanity tracking (UNIT_POWER_FREQUENT, arg1 == "player", arg2 ==
--- "INSANITY", where Orbs tracking was before)
--- Insanity decay rate tracking? Time until 0? In bar form?
--- Add tracking of new things (Void Torrent (only show if in Voidform?),
--- Void Bolt, Shadow Word: Void, Lingering Insanity?, Shadow Word: Death health
--- threshold changing depending on talents, Void Ray + stack text, Shadow
--- Crash, Mind Spike stacks)
+-- Mind Spike stacks on targets
+-- Void Ray stacks + duration
+-- Make sure Shadow Word: Death health threshold thing works
+-- Formula for Void Bolt refreshing DoTs
 
 -- Later:
--- Find a way to not special-case the changing of Void Bolt's icon
 -- Redo the whole config thing, because there's no way creating all the options
 -- manually is the best way to do it
--- Basically just review all the code
+-- Redo all the setup stuff, because things are breaking when changing talents
+-- and stuff
 
-
-
-
-
+local playerIsInVoidform = false
+local voidformBar = false -- Probably not actually useful
 
 local function toSet(t)
   local u = {}
@@ -84,7 +79,7 @@ local cfg = {
   dots = {
     589, -- Shadow Word: Pain
     34914, -- Vampiric Touch
-    217673, -- Mind Spike
+    -- 217673, -- Mind Spike
   },
   dynIconSize = {12, 12},
   dynBarSize = {200, 12},
@@ -106,71 +101,71 @@ local cfg = {
   fontPoint = {"CENTER", "CENTER", 2, 0},
   gcdBarColor = {1, 1, 1, 0.5},
   hiddenBars = { -- Hide cooldowns that are too long to be part of the main rotation
-    ["cast"] = false,
-    ["voidform"] = true,
-    [34433] = true, -- Shadowfriend
-    [205385] = true, -- Shadow Crash
-    [205065] = true, -- Void Torrent
-    [205351] = true, -- Shadow Word: Void
-  },
-  hideOOC = false,
-  iconPoint = {"RIGHT", "LEFT", -1, 0},
-  iconSize = {20, 20},
-  links = {
-    [205448] = 228260, -- Void Eruption -> Void Bolt
-    [123040] = 34433, -- Mindfriender
-  },
-  secondaryResourceBar = 8092, -- Mind Blast
-  secondaryResourceBreakpoint = 70,
-  secondaryResourceBreakpointColor = {0, 1, 0, 1},
-  showDoTBars = true,
-  SingularityPoint = {"TOP", "UIParent", "CENTER", 0, -162},
-  staticParent = "UIParent",
-  shouldReplaceIcon = {
-    [228260] = 205448, -- Void Eruption -> Void Bolt
-  },
-  staticSortOrder = {
-    "cast",
-    "voidform",
-    15407, -- Mind Flay
-    228260, -- Void Bolt
-    8092, -- Mind Blast
-    32379, -- Shadow Word: Death
-    34433, -- Shadowfriend
-  },
-  texCoords = {0.1, 0.9, 0.1, 0.9}, -- Zoom icons in a little
-  texts = {
-  },
-  trackedEvents = {
-    "UNIT_AURA", -- buffs
-    "UNIT_POWER_FREQUENT", -- secondary resource
-    "UNIT_SPELLCAST_START", -- casts
-    "UNIT_SPELLCAST_CHANNEL_START", -- casts
-    "UNIT_SPELLCAST_SENT", -- GCD
-    "UNIT_SPELLCAST_STOP", -- casts
-    "UNIT_SPELLCAST_CHANNEL_STOP", -- casts
-    "UNIT_SPELLCAST_INTERRUPTED", -- casts
-    "UNIT_SPELLCAST_SUCCEEDED", -- cooldowns
-    "COMBAT_LOG_EVENT_UNFILTERED", -- DoTs, Orbs
-    "PLAYER_TARGET_CHANGED", -- dynamic reordering
-    "UPDATE_MOUSEOVER_UNIT", -- dynamic reordering
-    "PLAYER_FOCUS_CHANGED", -- dynamic reordering
-    "PLAYER_TALENT_UPDATE", -- texts and settings
-    "PLAYER_ENTERING_WORLD", -- texts and settings
-    "PLAYER_DEAD", -- texts
-    "PLAYER_REGEN_ENABLED", -- hide OOC
-    "PLAYER_REGEN_DISABLED", -- hide OOC
-  },
-  unitIDSymbols = {
-    ["target"] = "t",
-    ["mouseover"] = "m",
-    ["focus"] = "f",
-    ["boss1"] = "b1",
-    ["boss2"] = "b2",
-    ["boss3"] = "b3",
-    ["boss4"] = "b4",
-    ["boss5"] = "b5",
-  },
+  ["cast"] = false,
+  ["voidform"] = true,
+  [34433] = true, -- Shadowfriend
+  [205385] = true, -- Shadow Crash
+  [205065] = true, -- Void Torrent
+  [205351] = true, -- Shadow Word: Void
+},
+hideOOC = false,
+iconPoint = {"RIGHT", "LEFT", -1, 0},
+iconSize = {20, 20},
+links = {
+  [205448] = 228260, -- Void Eruption -> Void Bolt
+  [123040] = 34433, -- Mindfriender
+},
+secondaryResourceBar = 8092, -- Mind Blast
+secondaryResourceBreakpoint = 70,
+secondaryResourceBreakpointColor = {0, 1, 0, 1},
+showDoTBars = true,
+SingularityPoint = {"TOP", "UIParent", "CENTER", 0, -162},
+staticParent = "UIParent",
+shouldReplaceIcon = {
+  [228260] = 205448, -- Void Eruption -> Void Bolt
+},
+staticSortOrder = {
+  "cast",
+  "voidform",
+  15407, -- Mind Flay
+  228260, -- Void Bolt
+  8092, -- Mind Blast
+  32379, -- Shadow Word: Death
+  34433, -- Shadowfriend
+},
+texCoords = {0.1, 0.9, 0.1, 0.9}, -- Zoom icons in a little
+texts = {
+},
+trackedEvents = {
+  "UNIT_AURA", -- buffs
+  "UNIT_POWER_FREQUENT", -- secondary resource
+  "UNIT_SPELLCAST_START", -- casts
+  "UNIT_SPELLCAST_CHANNEL_START", -- casts
+  "UNIT_SPELLCAST_SENT", -- GCD
+  "UNIT_SPELLCAST_STOP", -- casts
+  "UNIT_SPELLCAST_CHANNEL_STOP", -- casts
+  "UNIT_SPELLCAST_INTERRUPTED", -- casts
+  "UNIT_SPELLCAST_SUCCEEDED", -- cooldowns
+  "COMBAT_LOG_EVENT_UNFILTERED", -- DoTs, Orbs
+  "PLAYER_TARGET_CHANGED", -- dynamic reordering
+  "UPDATE_MOUSEOVER_UNIT", -- dynamic reordering
+  "PLAYER_FOCUS_CHANGED", -- dynamic reordering
+  "PLAYER_TALENT_UPDATE", -- texts and settings
+  "PLAYER_ENTERING_WORLD", -- texts and settings
+  "PLAYER_DEAD", -- texts
+  "PLAYER_REGEN_ENABLED", -- hide OOC
+  "PLAYER_REGEN_DISABLED", -- hide OOC
+},
+unitIDSymbols = {
+  ["target"] = "t",
+  ["mouseover"] = "m",
+  ["focus"] = "f",
+  ["boss1"] = "b1",
+  ["boss2"] = "b2",
+  ["boss3"] = "b3",
+  ["boss4"] = "b4",
+  ["boss5"] = "b5",
+},
 }
 
 cfg.buffs = toSet(cfg.buffs)
@@ -243,10 +238,12 @@ local function createFrames()
   b.static.cast.icon.tex = b.static.cast.icon:CreateTexture()
   b.static.cast.icon.fs = b.static.cast.icon:CreateFontString()
 
-  b.static.voidform = CreateFrame("StatusBar", nil, b.static)
-  b.static.voidform.icon = CreateFrame("frame", nil, b.static.voidform)
-  b.static.voidform.icon.tex = b.static.voidform.icon:CreateTexture()
-  b.static.voidform.icon.fs = b.static.voidform.icon:CreateFontString()
+  if voidformBar then
+    b.static.voidform = CreateFrame("StatusBar", nil, b.static)
+    b.static.voidform.icon = CreateFrame("frame", nil, b.static.voidform)
+    b.static.voidform.icon.tex = b.static.voidform.icon:CreateTexture()
+    b.static.voidform.icon.fs = b.static.voidform.icon:CreateFontString()
+  end
 
   b.dynamic:SetPoint("TOP", b.static, "BOTTOM", 0, -1)
 
@@ -551,31 +548,7 @@ end
 Singularity["UPDATE_MOUSEOVER_UNIT"] = Singularity["PLAYER_TARGET_CHANGED"]
 Singularity["PLAYER_FOCUS_CHANGED"] = Singularity["PLAYER_TARGET_CHANGED"]
 
-Singularity["UNIT_POWER_FREQUENT"] = function(self, event, ...) -- Insanity
-  local unit, powerType = ...
-  if unit == "player" and powerType == "INSANITY" then
-    --if select(12, ...) == 194249 then -- Voidform
-    --  Singularity.bars.static.insanity.expires =
 
-    -- Assuming the buff tooltip is right, insanity drains at 9.5/second to start
-    -- and 0.5/second more per second after that. So, if we currently have d
-    -- stacks of Voidform*, then in s seconds i insanity will have been
-    -- drained, where
-    --   i = s * (2d + s + 37)/4
-    --   <=> d = 2i/s - s/2 - 37/2
-    --   <=> s = 1/2 * (sqrt(16i + 4*d^2 + 148d + 1369) - 2d - 37).
-    --
-    -- So, with current values, when our insanity value updates, we will exit
-    -- Voidform (sqrt(16i + 4*d^2 + 148d + 1369) - 2d - 37)/2 seconds.
-    --
-    -- From in-game testing it seems like this is about right:
-    -- math.floor((math.sqrt(16*insanity + 4*(stacks^2) + 148*stacks + 1369) - 2*stacks - 37)/2 + 0.5)
-
-    --  return
-    --end
-    updateStackTexts()
-  end
-end
 
 Singularity["UNIT_AURA"] = function(self, event, ...)
   local unitID = ...
@@ -690,11 +663,85 @@ Singularity["UNIT_SPELLCAST_SUCCEEDED"] = function(self, event, ...)
   end)
 end
 
+Singularity["UNIT_POWER_FREQUENT"] = function(self, event, ...) -- Insanity
+  local unit, powerType = ...
+  if unit == "player" and powerType == "INSANITY" then
+    --if select(12, ...) == 194249 then -- Voidform
+    --  Singularity.bars.static.insanity.expires =
+
+    -- Assuming the buff tooltip is right, insanity drains at 9.5/second to start
+    -- and 0.5/second more per second after that. So, if we currently have d
+    -- stacks of Voidform*, then in s seconds i insanity will have been
+    -- drained, where
+    --   i = s * (2d + s + 37)/4
+    --   <=> d = 2i/s - s/2 - 37/2
+    --   <=> s = 1/2 * (sqrt(16i + 4*d^2 + 148d + 1369) - 2d - 37).
+    --
+    -- So, with current values, when our insanity value updates, we will exit
+    -- Voidform (sqrt(16i + 4*d^2 + 148d + 1369) - 2d - 37)/2 seconds.
+    --
+    -- From in-game testing it seems like this is about right:
+    -- math.floor((math.sqrt(16*insanity + 4*(stacks^2) + 148*stacks + 1369) - 2*stacks - 37)/2 + 0.5)
+
+    --  return
+    --end
+    updateStackTexts()
+
+    if voidformBar then
+      if playerIsInVoidform then
+        local insanity = UnitPower("player", "INSANITY")
+        local stacks = select(4, UnitBuff("player", "Voidform")) - 2 -- TODO: Figure out localization
+        -- local expires = math.floor((math.sqrt(16*insanity + 4*(stacks^2) + 148*stacks + 1369) - 2*stacks - 37)/2 + 0.5)
+        local expires = (math.sqrt(16*insanity + 4*(stacks^2) + 148*stacks + 1369) - 2*stacks - 37)/2
+        Singularity.bars.static.voidform.expires = GetTime() + expires
+      end
+    end
+  end
+end
+
 Singularity["COMBAT_LOG_EVENT_UNFILTERED"] = function(self, event, ...)
   local timestamp, subevent, _, srcGUID, _, _, _, tarGUID, tarName, _, _, spellID, _, _, _, powerType = ...
 
   if srcGUID ~= UnitGUID("player") then return end
   if not SingularityDB.showDoTBars then return end
+
+  if voidformBar then
+    if spellID == 194249 and srcGUID == UnitGUID("player") then -- Voidform
+      if subevent == "SPELL_AURA_APPLIED" then
+        playerIsInVoidform = true
+        Singularity.bars.static.voidform:SetScript("OnUpdate", function()
+          local vf = Singularity.bars.static.voidform
+          -- local insanity = UnitPower("player", "INSANITY")
+          -- local stacks = select(4, UnitBuff("player", "Voidform")) - 2 -- TODO: Figure out localization
+          -- local timeLeft = math.floor((math.sqrt(16*insanity + 4*(stacks^2) + 148*stacks + 1369) - 2*stacks - 37)/2 + 0.5)
+          timeLeft = (vf.expires or 0) - GetTime()
+          vf:SetValue(timeLeft)
+        end)
+      elseif subevent == "SPELL_AURA_REMOVED" then
+        playerIsInVoidform = false
+        Singularity.bars.static.voidform:SetScript("OnUpdate", nil)
+        Singularity.bars.static.voidform:SetValue(0)
+      end
+    end
+  end
+
+  if subevent == "SPELL_DAMAGE" and spellID == 205448 then
+    for dot, _ in pairs(SingularityDB.dots) do
+      for _, frame in pairs(Singularity.bars.dynamic) do
+        if type(frame) == "table" then
+          if frame.GUID == tarGUID then
+            local f = frame[dot]
+            -- I have no idea what to refresh the timers to.
+            -- f.expires = f.expires + min(f.baseDuration, f.baseDuration * 1.3 - f.timeLeft)
+            -- f.expires = GetTime() + f.baseDuration + 2 -- ???????????????????????????
+            break
+          end
+        end
+      end
+    end
+    return
+  end
+
   if not SingularityDB.dots[spellID] then return end
 
   if subevent == "UNIT_DIED" then
