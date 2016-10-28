@@ -1,3 +1,0 @@
-Singularity
-===========
-WoW addon thing.
