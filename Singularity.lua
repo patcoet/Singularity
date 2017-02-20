@@ -30,17 +30,10 @@ local defaults = {
   },
 }
 
--- local spells = {    -- [spellId] = shown
---   [17]     = false, -- Power Word: Shield
---   [586]    = false, -- Fade
---   [8092]   = true,  -- Mind Blast
---   [8122]   = false, -- Psychic Scream
---   [10060]  = false, -- Power Infusion
---   [32375]  = false, -- Mass Dispel
---   [47585]  = false, -- Dispersion
---   [199911] = true,  -- Shadow Word: Death (talented)
---   [205448] = false,  -- Void Bolt
--- }
+local executeBar = 199911
+local showInsanityBar = true
+local lagCompensation = 0.300 -- Pretend cooldowns finish 300 ms earlier
+                              -- Set to 0 if you're not using the Custom Lag Tolerance CVar!
 
 local spells = { -- {spellId, shown}
 	-- (So that we can use ipairs to iterate through them in a set order)
@@ -63,11 +56,6 @@ for i, color in ipairs(colors) do
 	end
 end
 
-local executeRange = 0.35
-local executeBar = 199911
-local showInsanityBar = true
-local lagCompensation = 0.300 -- Pretend cooldowns finish 300 ms earlier
-
 local isInTable = function(table, value)
   for k, v in pairs(table) do
     if v == value then
@@ -88,17 +76,7 @@ local doCooldowns = function(self, dt)
   end
 
   for _, bar in pairs(Singularity.bars) do
-  	local start, duration
-  	-- if bar.spellId == executeBar then
-  	-- 	local curr, max = GetSpellCharges(bar.spellId)
-  	-- 	if curr == max then
-  	-- 		start = 0
-  	-- 	else
-  	-- 	  start, duration = select(3, GetSpellCharges(bar.spellId))
-  	-- 	end
-  	-- else
-	    start, duration = GetSpellCooldown(bar.spellId)
-	  -- end
+    local start, duration = GetSpellCooldown(bar.spellId)
     if start and start > 0 + lagCompensation then
       bar:SetValue(((start + duration) - GetTime()) - lagCompensation)
     else
@@ -324,9 +302,7 @@ Singularity:SetScript("OnEvent", function(self, event, ...)
 
   if (event == "UNIT_HEALTH_FREQUENT" and ... == "target") or (event == "PLAYER_TARGET_CHANGED" and UnitExists("target")) then
   	debug("health")
-    local cur, max = UnitHealth("target"), UnitHealthMax("target")
 
-    -- if cur/max < executeRange then
     if IsUsableSpell(32379) or (select(4, GetTalentInfo(4, 2)) and IsUsableSpell(199911)) then
       -- showBar(executeBar)
       Singularity.bars[executeBar].icon.tex:SetDesaturated(false)
